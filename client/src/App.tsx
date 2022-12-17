@@ -1,6 +1,6 @@
 import Editor from "@monaco-editor/react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import ts, { isConstructorDeclaration } from "typescript";
+import ts, { ESMap, isConstructorDeclaration, Map } from "typescript";
 import "./App.css";
 
 type Point = {
@@ -24,7 +24,11 @@ type Sensor = {
   getRoads: () => Point[]; // Returns a list of available roads around you
 };
 
-type Data = any; // You can use it to store and use data
+type DataStore = {
+  has(key: string): boolean;
+  get(key: string): string;
+  set(key: string, value: string): void;
+}; // You can use it to store and use data
 
 interface SimulationProps {
   grid: string[][];
@@ -87,9 +91,15 @@ type Sensor = {
   getRoads: () => Point[] // Returns a list of available roads around you
 }
 
-type Data = any; // You can use it to store and use data
+// You can use this to store and use data in subsequent game-loop calls. 
+// You will need to handle the serialization and deserialization of data.
+type DataStore = {
+  has(key: string): boolean; // returns if the key is in the data store
+  get(key: string): string | undefined; // returns the value of the key if it exists
+  set(key: string, value: string): void; // sets the value for the key
+}; 
 
-function gameLoop(direction: Direction, gps: GPS, sensor: Sensor, data: Data) {
+function gameLoop(direction: Direction, gps: GPS, sensor: Sensor, data: DataStore) {
   // your code here!
 }
 `;
@@ -163,11 +173,13 @@ const checkEndCondition = function (
   };
 };
 
+type KeyValue = { [key: string]: string };
+
 const WORLD = {
   location: { x: 0, y: 0 } as Point,
   target: { x: 0, y: 0 } as Point,
   grid: [] as string[][],
-  data: {} as Data,
+  data: {} as KeyValue,
 };
 
 function App() {
@@ -248,16 +260,28 @@ function App() {
     },
   };
 
+  const dataStore: DataStore = {
+    has(key: string): boolean {
+      const value = WORLD.data[key];
+      return value !== undefined;
+    },
+    get(key: string) {
+      return WORLD.data[key];
+    },
+    set(key: string, value: string) {
+      WORLD.data[key] = value;
+    },
+  };
+
   const gameLoop = async function (
     userCode: (
       direction: Direction,
       gps: GPS,
       sensor: Sensor,
-      data: Data
+      data: DataStore
     ) => void
   ) {
-    userCode(direction, gps, sensor, WORLD.data); // run user code
-    WORLD.data = JSON.parse(JSON.stringify(WORLD.data));
+    userCode(direction, gps, sensor, dataStore); // run user code
     setLocation({ x: WORLD.location.x, y: WORLD.location.y });
   };
 
@@ -272,7 +296,7 @@ function App() {
         direction: Direction,
         gps: GPS,
         sensor: Sensor,
-        data: Data
+        data: DataStore
       ) => void = eval(userCode);
       // if not continue execution
       setTimeout(() => {
@@ -293,7 +317,7 @@ function App() {
       direction: Direction,
       gps: GPS,
       sensor: Sensor,
-      data: Data
+      data: DataStore
     ) => void = eval(userCode);
     setSimulating(true);
     gameLoop(userFunc);
