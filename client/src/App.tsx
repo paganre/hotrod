@@ -1,6 +1,6 @@
 import Editor from "@monaco-editor/react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import ts, { ESMap, isConstructorDeclaration, Map } from "typescript";
+import React, { useState } from "react";
+import ts from "typescript";
 import "./App.css";
 
 type Point = {
@@ -18,10 +18,20 @@ type Direction = {
 type GPS = {
   getLocation: () => Point; // Gets your hot-rod's location
   getTarget: () => Point; // Gets your target location, if any
+  getBounds: () => {
+    x: number; // Maximum x value
+    y: number; // Maximum y value
+  };
+};
+
+type Pedestrian = {
+  location: Point;
+  direction: "up" | "down" | "left" | "right" | "static";
 };
 
 type Sensor = {
   getRoads: () => Point[]; // Returns a list of available roads around you
+  getPedestrians: () => Pedestrian[]; // Returns a list of pedestrians around you
 };
 
 type DataStore = {
@@ -32,16 +42,21 @@ type DataStore = {
 
 interface SimulationProps {
   grid: string[][];
+  pedestrians: Pedestrian[];
   location: Point;
 }
 
 function Simulation(props: SimulationProps) {
   function renderCell(cell: string, j: number, i: number) {
+    const hasPed =
+      props.pedestrians.filter((p) => p.location.x === i && p.location.y === j)
+        .length > 0;
     return (
       <div className={`cell cell-${cell}`} key={j}>
         {props.location.x === i && props.location.y === j && (
           <div className="hot-rod" />
         )}
+        {hasPed && <div className="pedestrian" />}
       </div>
     );
   }
@@ -77,18 +92,31 @@ function CodeEditor(props: CodeEditorProps) {
   x: number
   y: number
 }
+
 type Direction = {
     up: () => void
     left: () => void
     down: () => void
     right: () => void
 }
+
 type GPS = {
   getLocation: () => Point // Gets your hot-rod's location
   getTarget: () => Point // Gets your target location, if any 
+  getBounds: () => {
+    x: number; // Maximum x value
+    y: number; // Maximum y value
+  };
 }
+
+type Pedestrian = {
+  location: Point;
+  direction: "up" | "down" | "left" | "right" | "static";
+};
+
 type Sensor = {
   getRoads: () => Point[] // Returns a list of available roads around you
+  getPedestrians: () => Pedestrian[]; // Returns a list of pedestrians around you
 }
 
 // You can use this to store and use data in subsequent game-loop calls. 
@@ -167,6 +195,25 @@ const checkEndCondition = function (
       };
     }
   }
+  if (
+    !(
+      WORLD.previousLocation.x === WORLD.location.x &&
+      WORLD.previousLocation.y === WORLD.location.y
+    )
+  ) {
+    // hot rod moved this turn
+    const hasPed =
+      WORLD.pedestrians.filter(
+        (p) => p.location.x === loc.x && p.location.y === loc.y
+      ).length > 0;
+    if (hasPed) {
+      console.log({ prev: WORLD.previousLocation, curr: WORLD.location });
+      return {
+        ended: true,
+        result: "lost - hit a pedestrian!",
+      };
+    }
+  }
   return {
     ended: false,
     result: "",
@@ -177,9 +224,46 @@ type KeyValue = { [key: string]: string };
 
 const WORLD = {
   location: { x: 0, y: 0 } as Point,
+  previousLocation: { x: 0, y: 0 } as Point,
   target: { x: 0, y: 0 } as Point,
+  pedestrians: [] as Pedestrian[],
   grid: [] as string[][],
   data: {} as KeyValue,
+};
+
+const simulateWorld = function () {
+  for (const ped of WORLD.pedestrians) {
+    switch (ped.direction) {
+      case "down":
+        if (ped.location.x < WORLD.grid.length - 1) {
+          ped.location.x += 1;
+        }
+        break;
+      case "up":
+        if (ped.location.x > 0) {
+          ped.location.x -= 1;
+        }
+        break;
+      case "left":
+        if (ped.location.y > 0) {
+          ped.location.y -= 1;
+        }
+        break;
+      case "right":
+        if (ped.location.y < WORLD.grid[0].length - 1) {
+          ped.location.y += 1;
+        }
+        break;
+    }
+    const dirs = [
+      "up",
+      "down",
+      "left",
+      "right",
+      "static",
+    ] as Pedestrian["direction"][];
+    ped.direction = dirs[Math.floor(Math.random() * dirs.length)];
+  }
 };
 
 function App() {
@@ -189,6 +273,7 @@ function App() {
   const [location, setLocation] = React.useState<Point>({ x: 0, y: 0 });
   const [target, setTarget] = React.useState<Point>({ x: 0, y: 0 });
   const [userCode, setUserCode] = React.useState("");
+  const [pedestrians, setPedestrians] = React.useState<Pedestrian[]>([]);
 
   React.useEffect(() => {
     fetch(`/api${window.location.pathname}`)
@@ -200,14 +285,26 @@ function App() {
             if (row[j] === "S") {
               setLocation({ x: i, y: j });
               WORLD.location = { x: i, y: j };
+              WORLD.previousLocation = { x: i, y: j };
             }
             if (row[j] === "E") {
               setTarget({ x: i, y: j });
               WORLD.target = { x: i, y: j };
             }
+            if (row[j] === "P") {
+              WORLD.pedestrians.push({
+                location: {
+                  x: i,
+                  y: j,
+                },
+                direction: "static",
+              });
+              row[j] = ".";
+            }
           }
         }
         setGrid(data.grid);
+        setPedestrians(WORLD.pedestrians);
         WORLD.grid = data.grid;
       });
   }, []);
@@ -218,6 +315,12 @@ function App() {
     },
     getTarget: function () {
       return WORLD.target;
+    },
+    getBounds: function () {
+      return {
+        x: WORLD.grid.length - 1,
+        y: WORLD.grid[0].length - 1,
+      };
     },
   };
 
@@ -258,6 +361,9 @@ function App() {
       }
       return out;
     },
+    getPedestrians: function () {
+      return WORLD.pedestrians; // filter these folks a bit
+    },
   };
 
   const dataStore: DataStore = {
@@ -281,7 +387,10 @@ function App() {
       data: DataStore
     ) => void
   ) {
+    WORLD.previousLocation = { x: WORLD.location.x, y: WORLD.location.y }; // update previous location before running user code
     userCode(direction, gps, sensor, dataStore); // run user code
+    simulateWorld();
+    setPedestrians(WORLD.pedestrians);
     setLocation({ x: WORLD.location.x, y: WORLD.location.y });
   };
 
@@ -332,7 +441,7 @@ function App() {
 
   return (
     <div className="hot-rod-app">
-      <Simulation location={location} grid={grid} />
+      <Simulation pedestrians={pedestrians} location={location} grid={grid} />
       <CodeEditor
         runCode={startSimulation}
         simulating={simulating}

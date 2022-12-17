@@ -102,3 +102,10 @@
   height: 12px;
   background-color: red;
 }
+
+.pedestrian {
+  border-radius: 50%;
+  width: 6px;
+  height: 6px;
+  background-color: black;
+}
