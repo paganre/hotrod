@@ -88,7 +88,9 @@ interface CodeEditorProps {
 }
 
 function CodeEditor(props: CodeEditorProps) {
-  const defaultCode: string = `type Point = {
+  let defaultCode = localStorage.getItem(getApiPath());
+  if (!defaultCode) {
+    defaultCode = `type Point = {
   x: number
   y: number
 }
@@ -131,6 +133,7 @@ function gameLoop(direction: Direction, gps: GPS, sensor: Sensor, data: DataStor
   // your code here!
 }
 `;
+  }
   const [code, setCode] = useState(defaultCode);
   return (
     <div className="hot-rod-code-editor">
@@ -266,6 +269,10 @@ const simulateWorld = function () {
   }
 };
 
+const getApiPath = function (): string {
+  return `/api${window.location.pathname}`;
+};
+
 function App() {
   const [grid, setGrid] = React.useState<string[][]>([]);
   const [simulating, setSimulating] = React.useState<boolean>(false);
@@ -276,7 +283,7 @@ function App() {
   const [pedestrians, setPedestrians] = React.useState<Pedestrian[]>([]);
 
   React.useEffect(() => {
-    fetch(`/api${window.location.pathname}`)
+    fetch(getApiPath())
       .then((res) => res.json())
       .then((data) => {
         for (let i = 0; i < data.grid.length; i++) {
@@ -433,6 +440,8 @@ function App() {
   }, [userCode]);
 
   const startSimulation = function (code: string) {
+    // save to local storage
+    localStorage.setItem(getApiPath(), code);
     const exec = `${code}
     gameLoop`;
     let userCode = ts.transpile(exec);
