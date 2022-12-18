@@ -82,58 +82,18 @@ function Simulation(props: SimulationProps) {
 }
 
 interface CodeEditorProps {
+  defaultCode: string;
   simulating: boolean;
   result: string;
   runCode: (code: string) => void;
   reset: () => void;
+  nextLevel: () => void;
 }
 
 function CodeEditor(props: CodeEditorProps) {
   let defaultCode = localStorage.getItem(getApiPath());
   if (!defaultCode) {
-    defaultCode = `type Point = {
-  x: number
-  y: number
-}
-
-type Direction = {
-    up: () => void
-    left: () => void
-    down: () => void
-    right: () => void
-}
-
-type GPS = {
-  getLocation: () => Point // Gets your hot-rod's location
-  getTarget: () => Point // Gets your target location, if any 
-  getBounds: () => {
-    x: number; // Maximum x value
-    y: number; // Maximum y value
-  };
-}
-
-type Pedestrian = {
-  location: Point;
-  direction: "up" | "down" | "left" | "right" | "static";
-};
-
-type Sensor = {
-  getRoads: () => Point[] // Returns a list of available roads around you
-  getPedestrians: () => Pedestrian[]; // Returns a list of pedestrians around you
-}
-
-// You can use this to store and use data in subsequent game-loop calls. 
-// You will need to handle the serialization and deserialization of data.
-type DataStore = {
-  has(key: string): boolean; // returns if the key is in the data store
-  get(key: string): string | undefined; // returns the value of the key if it exists
-  set(key: string, value: string): void; // sets the value for the key
-}; 
-
-function gameLoop(direction: Direction, gps: GPS, sensor: Sensor, data: DataStore) {
-  // your code here!
-}
-`;
+    defaultCode = props.defaultCode;
   }
   const [code, setCode] = useState(defaultCode);
   return (
@@ -167,6 +127,17 @@ function gameLoop(direction: Direction, gps: GPS, sensor: Sensor, data: DataStor
           </button>
         )}
         {props.result && <div style={{ marginLeft: 10 }}>{props.result}</div>}
+        {props.result === "won" && (
+          <button
+            style={{ marginLeft: 10 }}
+            className="next-level"
+            onClick={() => {
+              props.nextLevel();
+            }}
+          >
+            Next Level
+          </button>
+        )}
       </div>
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div style={{ marginTop: 20 }}>
@@ -224,7 +195,6 @@ const checkEndCondition = function (
         (p) => p.location.x === loc.x && p.location.y === loc.y
       ).length > 0;
     if (hasPed) {
-      console.log({ prev: WORLD.previousLocation, curr: WORLD.location });
       return {
         ended: true,
         result: "lost - hit a pedestrian!",
@@ -295,6 +265,7 @@ function App() {
   const [location, setLocation] = React.useState<Point>({ x: 0, y: 0 });
   const [target, setTarget] = React.useState<Point>({ x: 0, y: 0 });
   const [userCode, setUserCode] = React.useState("");
+  const [defaultCode, setDefaultCode] = React.useState("");
   const [pedestrians, setPedestrians] = React.useState<Pedestrian[]>([]);
 
   React.useEffect(() => {
@@ -326,6 +297,7 @@ function App() {
             }
           }
         }
+        setDefaultCode(data.code);
         setGrid(data.grid);
         setPedestrians(WORLD.pedestrians);
         WORLD.grid = data.grid;
@@ -467,6 +439,7 @@ function App() {
   const reset = function () {
     const grid = JSON.parse(JSON.stringify(WORLD.original_grid));
     WORLD.pedestrians = [];
+    WORLD.data = {};
     for (let i = 0; i < grid.length; i++) {
       const row = grid[i];
       for (let j = 0; j < row.length; j++) {
@@ -502,10 +475,15 @@ function App() {
     <div className="hot-rod-app">
       <Simulation pedestrians={pedestrians} location={location} grid={grid} />
       <CodeEditor
+        defaultCode={defaultCode}
         reset={reset}
         runCode={startSimulation}
         simulating={simulating}
         result={result}
+        nextLevel={() => {
+          const level = parseInt(window.location.pathname.split("/")[1]);
+          window.location.pathname = `/${level + 1}`;
+        }}
       />
     </div>
   );

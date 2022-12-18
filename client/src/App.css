@@ -60,10 +60,19 @@
   float: right;
 }
 
+.next-level {
+  float: right;
+  background-color: green;
+  font: white;
+}
+
 .hot-rod-grid {
   display: flex;
   flex-direction: column;
   margin-top: 20px;
+  align-items: center;
+  justify-content: center;
+  height: calc(100% - 20px);
 }
 .row {
   display: flex;

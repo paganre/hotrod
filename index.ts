@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import express, { Express, Request, Response } from "express";
 import path from "path";
 import cors from "cors";
+import * as lvl from "./levels/1";
 
 dotenv.config();
 
@@ -12,64 +13,23 @@ app.use(cors());
 
 app.use(express.static(path.resolve(__dirname, "../client/build")));
 
-app.get("/api/1", (req, res) => {
-  res.json({
-    grid: [
-      ["W", "W", "E", "W", "W"],
-      ["W", "W", " ", "W", "W"],
-      ["W", "W", " ", "W", "W"],
-      ["W", "W", " ", "W", "W"],
-      ["W", "W", "S", "W", "W"],
-    ],
-  });
-});
+const LEVELS = {
+  "1": {
+    grid: lvl.GRID,
+  },
+};
 
-app.get("/api/2", (req, res) => {
-  res.json({
-    grid: [
-      ["W", "W", " ", " ", " ", "W", "W", "W", "W", "W"],
-      ["W", "W", " ", "W", " ", "W", "W", "W", "W", "W"],
-      ["W", "W", " ", "W", " ", "W", "W", "E", " ", " "],
-      ["W", "W", " ", "W", " ", "W", "W", "W", "W", " "],
-      ["W", "W", " ", "W", " ", "W", "W", "W", "W", " "],
-      ["W", "W", " ", "W", " ", "W", "W", "W", "W", " "],
-      ["W", "W", " ", "W", " ", "W", "W", "W", "W", " "],
-      ["W", "W", " ", "W", " ", "W", " ", " ", " ", " "],
-      ["W", "W", " ", "W", " ", "W", " ", "W", "W", "W"],
-      ["W", "W", " ", "W", " ", "W", " ", "W", "W", "W"],
-      ["W", "W", " ", "W", " ", "W", " ", "W", "W", "W"],
-      ["W", "W", " ", "W", " ", "W", " ", "W", "W", "W"],
-      ["W", "W", " ", "W", " ", "W", " ", "W", "W", "W"],
-      ["W", "W", " ", "W", " ", "W", " ", "W", "W", "W"],
-      ["W", "W", " ", "W", " ", "W", " ", "W", "W", "W"],
-      ["W", "W", " ", "W", " ", " ", " ", "W", "W", "W"],
-      ["W", "W", "S", "W", "W", "W", "W", "W", "W", "W"],
-    ],
-  });
-});
-
-app.get("/api/3", (req, res) => {
-  res.json({
-    grid: [
-      ["W", "W", "P", "P", "P", "W", "W", "W", "W", "W"],
-      ["W", "W", "P", "W", "P", "W", "W", "W", "W", "W"],
-      ["W", "W", "P", "W", "P", "W", "W", "E", "P", "P"],
-      ["W", "W", "P", "W", "P", "W", "W", "W", "W", "P"],
-      ["W", "W", "P", "W", "P", "W", "W", "W", "W", "P"],
-      ["W", "W", "P", "W", "P", "W", "W", "W", "W", "P"],
-      ["W", "W", "P", "W", "P", "W", "W", "W", "W", "P"],
-      ["W", "W", "P", "W", "P", "W", "P", "P", "P", "P"],
-      ["W", "W", "P", "W", "P", "W", "P", "W", "W", "W"],
-      ["W", "W", " ", "W", "P", "W", "P", "W", "W", "W"],
-      ["W", "W", " ", "W", "P", "W", "P", "W", "W", "W"],
-      ["W", "W", " ", "W", "P", "W", "P", "W", "W", "W"],
-      ["W", "W", " ", "W", "P", "W", "P", "W", "W", "W"],
-      ["W", "W", " ", "W", "P", "W", "P", "W", "W", "W"],
-      ["W", "W", " ", "W", "P", "W", "P", "W", "W", "W"],
-      ["W", "W", " ", "W", "P", "P", "P", "W", "W", "W"],
-      ["W", "W", "S", "W", "W", "W", "W", "W", "W", "W"],
-    ],
-  });
+app.get("/api/:id", (req, res) => {
+  const { id } = req.params;
+  try {
+    const lvl = require(`./levels/${id}`);
+    res.json({
+      grid: lvl.GRID,
+      code: lvl.DEFAULT_CODE,
+    });
+  } catch (ex) {
+    res.send(404);
+  }
 });
 
 const port = process.env.PORT || 8000;
