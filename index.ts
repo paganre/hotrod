@@ -2,7 +2,6 @@ import dotenv from "dotenv";
 import express, { Express, Request, Response } from "express";
 import path from "path";
 import cors from "cors";
-import * as lvl from "./levels/1";
 
 dotenv.config();
 
@@ -13,12 +12,6 @@ app.use(cors());
 
 app.use(express.static(path.resolve(__dirname, "../client/build")));
 
-const LEVELS = {
-  "1": {
-    grid: lvl.GRID,
-  },
-};
-
 app.get("/api/:id", (req, res) => {
   const { id } = req.params;
   try {
@@ -26,6 +19,7 @@ app.get("/api/:id", (req, res) => {
     res.json({
       grid: lvl.GRID,
       code: lvl.DEFAULT_CODE,
+      metadata: lvl.METADATA ? lvl.METADATA : {},
     });
   } catch (ex) {
     res.send(404);

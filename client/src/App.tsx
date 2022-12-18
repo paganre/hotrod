@@ -27,9 +27,11 @@ type GPS = {
 type Pedestrian = {
   location: Point;
   direction: "up" | "down" | "left" | "right" | "static";
+  target?: boolean;
 };
 
 type Sensor = {
+  isTargetClose: () => boolean; // Returns "true" if the target is close.
   getRoads: () => Point[]; // Returns a list of available roads around you
   getPedestrians: () => Pedestrian[]; // Returns a list of pedestrians around you
 };
@@ -44,6 +46,10 @@ interface SimulationProps {
   grid: string[][];
   pedestrians: Pedestrian[];
   location: Point;
+}
+
+function manhattanDistance(p1: Point, p2: Point) {
+  return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
 }
 
 function Simulation(props: SimulationProps) {
@@ -190,11 +196,17 @@ const checkEndCondition = function (
     )
   ) {
     // hot rod moved this turn
-    const hasPed =
-      WORLD.pedestrians.filter(
-        (p) => p.location.x === loc.x && p.location.y === loc.y
-      ).length > 0;
-    if (hasPed) {
+    const peds = WORLD.pedestrians.filter(
+      (p) => p.location.x === loc.x && p.location.y === loc.y
+    );
+    if (peds.length) {
+      const targets = peds.filter((p) => p.target);
+      if (targets.length === peds.length) {
+        return {
+          ended: true,
+          result: "won - found the target!",
+        };
+      }
       return {
         ended: true,
         result: "lost - hit a pedestrian!",
@@ -209,7 +221,14 @@ const checkEndCondition = function (
 
 type KeyValue = { [key: string]: string };
 
+type WorldMetadata = {
+  Sensor?: {
+    isTargetClose?: number;
+  };
+};
+
 const WORLD = {
+  metadata: {} as WorldMetadata,
   location: { x: 0, y: 0 } as Point,
   previousLocation: { x: 0, y: 0 } as Point,
   target: { x: 0, y: 0 } as Point,
@@ -272,6 +291,7 @@ function App() {
     fetch(getApiPath())
       .then((res) => res.json())
       .then((data) => {
+        WORLD.metadata = data.metadata;
         WORLD.original_grid = JSON.parse(JSON.stringify(data.grid));
         for (let i = 0; i < data.grid.length; i++) {
           const row = data.grid[i];
@@ -292,6 +312,16 @@ function App() {
                   y: j,
                 },
                 direction: "static",
+              });
+              row[j] = ".";
+            } else if (row[j] === "PX") {
+              WORLD.pedestrians.push({
+                location: {
+                  x: i,
+                  y: j,
+                },
+                direction: "static",
+                target: true,
               });
               row[j] = ".";
             }
@@ -335,6 +365,18 @@ function App() {
   };
 
   const sensor: Sensor = {
+    isTargetClose: function () {
+      if (WORLD.metadata.Sensor?.isTargetClose) {
+        const coverage = WORLD.metadata.Sensor.isTargetClose;
+        const spy = WORLD.pedestrians.find((p) => p.target);
+        if (spy) {
+          const distance = manhattanDistance(spy.location, WORLD.location);
+          return distance <= coverage;
+        }
+        throw Error("Your target is not set");
+      }
+      throw Error("Your sensor does not implement this function");
+    },
     getRoads: function () {
       const out = [];
       const possibilities = [
@@ -357,7 +399,11 @@ function App() {
       return out;
     },
     getPedestrians: function () {
-      return WORLD.pedestrians; // filter these folks a bit
+      return WORLD.pedestrians.map((p) => {
+        const ped = JSON.parse(JSON.stringify(p)) as Pedestrian;
+        ped.target = undefined;
+        return ped;
+      }); // filter these folks a bit
     },
   };
 
@@ -459,6 +505,16 @@ function App() {
               y: j,
             },
             direction: "static",
+          });
+          row[j] = ".";
+        } else if (row[j] === "PX") {
+          WORLD.pedestrians.push({
+            location: {
+              x: i,
+              y: j,
+            },
+            direction: "static",
+            target: true,
           });
           row[j] = ".";
         }
