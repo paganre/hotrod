@@ -85,6 +85,7 @@ interface CodeEditorProps {
   simulating: boolean;
   result: string;
   runCode: (code: string) => void;
+  reset: () => void;
 }
 
 function CodeEditor(props: CodeEditorProps) {
@@ -142,14 +143,27 @@ function gameLoop(direction: Direction, gps: GPS, sensor: Sensor, data: DataStor
         {props.simulating ? (
           <div style={{ marginLeft: 10 }}>Running...</div>
         ) : (
+          !props.result && (
+            <button
+              style={{ marginLeft: 10 }}
+              className="run-code"
+              onClick={() => {
+                props.runCode(code);
+              }}
+            >
+              Run
+            </button>
+          )
+        )}
+        {!props.simulating && props.result && (
           <button
             style={{ marginLeft: 10 }}
             className="run-code"
             onClick={() => {
-              props.runCode(code);
+              props.reset();
             }}
           >
-            Run
+            Reset
           </button>
         )}
         {props.result && <div style={{ marginLeft: 10 }}>{props.result}</div>}
@@ -231,6 +245,7 @@ const WORLD = {
   target: { x: 0, y: 0 } as Point,
   pedestrians: [] as Pedestrian[],
   grid: [] as string[][],
+  original_grid: [] as string[][],
   data: {} as KeyValue,
 };
 
@@ -286,6 +301,7 @@ function App() {
     fetch(getApiPath())
       .then((res) => res.json())
       .then((data) => {
+        WORLD.original_grid = JSON.parse(JSON.stringify(data.grid));
         for (let i = 0; i < data.grid.length; i++) {
           const row = data.grid[i];
           for (let j = 0; j < row.length; j++) {
@@ -419,14 +435,14 @@ function App() {
         gameLoop(userFunc);
       }, 100);
     } else {
-      // reset the game
+      // end the game
       setSimulating(false);
       setResult(result);
     }
   }, [location]);
 
   React.useEffect(() => {
-    if (!userCode) {
+    if (!userCode || !simulating) {
       return;
     }
     const userFunc: (
@@ -435,9 +451,8 @@ function App() {
       sensor: Sensor,
       data: DataStore
     ) => void = eval(userCode);
-    setSimulating(true);
     gameLoop(userFunc);
-  }, [userCode]);
+  }, [userCode, simulating]);
 
   const startSimulation = function (code: string) {
     // save to local storage
@@ -445,13 +460,49 @@ function App() {
     const exec = `${code}
     gameLoop`;
     let userCode = ts.transpile(exec);
+    setSimulating(true);
     setUserCode(userCode);
+  };
+
+  const reset = function () {
+    const grid = JSON.parse(JSON.stringify(WORLD.original_grid));
+    WORLD.pedestrians = [];
+    for (let i = 0; i < grid.length; i++) {
+      const row = grid[i];
+      for (let j = 0; j < row.length; j++) {
+        if (row[j] === "S") {
+          setLocation({ x: i, y: j });
+          WORLD.location = { x: i, y: j };
+          WORLD.previousLocation = { x: i, y: j };
+        }
+        if (row[j] === "E") {
+          setTarget({ x: i, y: j });
+          WORLD.target = { x: i, y: j };
+        }
+        if (row[j] === "P") {
+          WORLD.pedestrians.push({
+            location: {
+              x: i,
+              y: j,
+            },
+            direction: "static",
+          });
+          row[j] = ".";
+        }
+      }
+    }
+    WORLD.grid = grid;
+    setGrid(grid);
+    setPedestrians(WORLD.pedestrians);
+    setSimulating(false);
+    setResult("");
   };
 
   return (
     <div className="hot-rod-app">
       <Simulation pedestrians={pedestrians} location={location} grid={grid} />
       <CodeEditor
+        reset={reset}
         runCode={startSimulation}
         simulating={simulating}
         result={result}
