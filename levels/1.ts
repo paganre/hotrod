@@ -22,7 +22,10 @@ export const DEFAULT_CODE: string = `/**
  * Alright!
  * You are finally graduated. 
  * Let's put your previous code into some chaotic test!
- * Rules are the same.
+ * Rules are the same, but Pedestrians are now moving randomly.
+ *
+ * TIP: Don't forget to take bounds into account.
+ * If a Pedestrian wants to go right but they are at the end of the grid, they won' move!
  **/
 
 
