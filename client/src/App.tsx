@@ -274,6 +274,9 @@ const simulateWorld = function () {
 };
 
 const getApiPath = function (): string {
+  if (window.location.pathname === "/") {
+    window.location.pathname = "/1";
+  }
   return `/api${window.location.pathname}`;
 };
 
