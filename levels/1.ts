@@ -1,32 +1,71 @@
 export const GRID: string[][] = [
-  ["W", "W", "E", "W", "W"],
-  ["W", "W", " ", "W", "W"],
-  ["W", "W", " ", "W", "W"],
-  ["W", "W", " ", "W", "W"],
-  ["W", "W", "S", "W", "W"],
+  ["W", "W", "P", "P", "P", "W", "W", "W", "W", "W"],
+  ["W", "W", "P", "W", "P", "W", "W", "W", "W", "W"],
+  ["W", "W", "P", "W", "P", "W", "W", "E", "P", "P"],
+  ["W", "W", "P", "W", "P", "W", "W", "W", "W", "P"],
+  ["W", "W", "P", "W", "P", "W", "W", "W", "W", "P"],
+  ["W", "W", "P", "W", "P", "W", "W", "W", "W", "P"],
+  ["W", "W", "P", "W", "P", "W", "W", "W", "W", "P"],
+  ["W", "W", "P", "W", "P", "W", "P", "P", "P", "P"],
+  ["W", "W", "P", "W", "P", "W", "P", "W", "W", "W"],
+  ["W", "W", " ", "W", "P", "W", "P", "W", "W", "W"],
+  ["W", "W", " ", "W", "P", "W", "P", "W", "W", "W"],
+  ["W", "W", " ", "W", "P", "W", "P", "W", "W", "W"],
+  ["W", "W", " ", "W", "P", "W", "P", "W", "W", "W"],
+  ["W", "W", " ", "W", "P", "W", "P", "W", "W", "W"],
+  ["W", "W", " ", "W", "P", "W", "P", "W", "W", "W"],
+  ["W", "W", " ", "W", "P", "P", "P", "W", "W", "W"],
+  ["W", "W", "S", "W", "W", "W", "W", "W", "W", "W"],
 ];
 
 export const DEFAULT_CODE: string = `/**
- * Your first mission is to get to the green square.
- * If you end up in dark squares, you lose.
- * You only have a single API you can use for this level, let's define it.
+ * Alright!
+ * You are finally graduated. 
+ * Let's put your previous code into some chaotic test!
+ * Rules are the same.
  **/
 
-/**
- * Direction is how you control your hot-rod
- * It is pretty simple, but do not end up in dark squares or you lose!
- **/
-type Direction = {
-    up: () => void // Move hot-rod one square up
-    left: () => void // Move hot-rod one square left
-    down: () => void // Move hot-rod one square down
-    right: () => void // Move hot-rod one square right
-} 
 
-// Let's go!
-function gameLoop(direction: Direction) {
-    // your code goes here. this will be executed at turn by turn.
+type Pedestrian = {
+    location: Point; // Where Pedestrian is
+    direction: "up" | "down" | "left" | "right" | "static"; // Which way Pedestrian will move.
+};
+
+type Sensor = {
+    getPedestrians: () => Pedestrian[]; // Returns the Pedestrians on the map.
+    getRoads: () => Point[] 
 }
 
+type GPS = {
+    getBounds: () => Point // x, y will give you the maximum value of x, y.
+    getLocation: () => Point
+    getTarget: () => Point
+}
 
+type DataStore = {
+    has(key: string): boolean
+    get(key: string): string | undefined
+    set(key: string, value: string): void
+};
+
+type Direction = {
+    up: () => void 
+    left: () => void
+    down: () => void 
+    right: () => void
+}
+
+type Point = {
+    x: number
+    y: number
+}
+  
+// Get to green tile without killing anyone
+function gameLoop(direction: Direction, gps: GPS, sensor: Sensor, data: DataStore) {
+
+}
 `;
+
+export const METADATA = {
+  nextLevel: "/2",
+};

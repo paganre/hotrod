@@ -28,6 +28,8 @@ type Pedestrian = {
   location: Point;
   direction: "up" | "down" | "left" | "right" | "static";
   target?: boolean;
+  moves?: Pedestrian["direction"][];
+  moveIndex?: number;
 };
 
 type Sensor = {
@@ -214,16 +216,24 @@ const checkEndCondition = function (
     }
   }
   return {
-    ended: false,
-    result: "",
+    ended: WORLD.metadata.executeOnce ? true : false,
+    result: WORLD.metadata.executeOnce ? "Could not reach it!" : "",
   };
 };
 
 type KeyValue = { [key: string]: string };
 
 type WorldMetadata = {
+  nextLevel: string;
   Sensor?: {
     isTargetClose?: number;
+  };
+  rateLimitOverrides?: {
+    direction?: number;
+  };
+  executeOnce?: boolean;
+  pedMoves?: {
+    [key: string]: Pedestrian["direction"][];
   };
 };
 
@@ -236,6 +246,12 @@ const WORLD = {
   grid: [] as string[][],
   original_grid: [] as string[][],
   data: {} as KeyValue,
+  rateLimits: {
+    direction: 1,
+  },
+  apiUsed: {
+    direction: 0,
+  },
 };
 
 const simulateWorld = function () {
@@ -269,13 +285,29 @@ const simulateWorld = function () {
       "right",
       "static",
     ] as Pedestrian["direction"][];
-    ped.direction = dirs[Math.floor(Math.random() * dirs.length)];
+    if (ped.moves && ped.moves.length > 0 && ped.moveIndex !== undefined) {
+      ped.direction = ped.moves[ped.moveIndex];
+      ped.moveIndex = (ped.moveIndex + 1) % ped.moves.length;
+    } else {
+      ped.direction = dirs[Math.floor(Math.random() * dirs.length)];
+    }
   }
 };
 
 const getApiPath = function (): string {
+  const lastQuestion = localStorage.getItem("lastQuestion") || "playground/1";
   if (window.location.pathname === "/") {
-    window.location.pathname = "/1";
+    window.location.pathname = `/${lastQuestion}`;
+  } else {
+    const currentQuestion = window.location.pathname.split("/")[1];
+    if (
+      !currentQuestion.startsWith("playground") &&
+      !lastQuestion.startsWith("playground") &&
+      parseInt(currentQuestion) > parseInt(lastQuestion)
+    ) {
+      // update last question
+      localStorage.setItem("lastQuestion", currentQuestion);
+    }
   }
   return `/api${window.location.pathname}`;
 };
@@ -295,6 +327,10 @@ function App() {
       .then((res) => res.json())
       .then((data) => {
         WORLD.metadata = data.metadata;
+        if (WORLD.metadata.rateLimitOverrides?.direction !== undefined) {
+          WORLD.rateLimits.direction =
+            WORLD.metadata.rateLimitOverrides.direction;
+        }
         WORLD.original_grid = JSON.parse(JSON.stringify(data.grid));
         for (let i = 0; i < data.grid.length; i++) {
           const row = data.grid[i];
@@ -308,23 +344,27 @@ function App() {
               setTarget({ x: i, y: j });
               WORLD.target = { x: i, y: j };
             }
-            if (row[j] === "P") {
+            if (row[j].startsWith("P")) {
+              const target = row[j] === "PX";
+              let moves: Pedestrian["direction"][] = [];
+              if (row[j].length > 0) {
+                const pedKey = row[j].substr(1);
+                if (
+                  WORLD.metadata.pedMoves &&
+                  WORLD.metadata.pedMoves[pedKey]
+                ) {
+                  moves = WORLD.metadata.pedMoves[pedKey];
+                }
+              }
               WORLD.pedestrians.push({
                 location: {
                   x: i,
                   y: j,
                 },
                 direction: "static",
-              });
-              row[j] = ".";
-            } else if (row[j] === "PX") {
-              WORLD.pedestrians.push({
-                location: {
-                  x: i,
-                  y: j,
-                },
-                direction: "static",
-                target: true,
+                target,
+                moves,
+                moveIndex: 0,
               });
               row[j] = ".";
             }
@@ -354,15 +394,63 @@ function App() {
 
   const direction: Direction = {
     up: function () {
+      if (
+        WORLD.rateLimits.direction &&
+        WORLD.apiUsed.direction === WORLD.rateLimits.direction
+      ) {
+        console.log(
+          `You can use direction only ${WORLD.rateLimits.direction} time${
+            WORLD.rateLimits.direction > 1 ? "s" : ""
+          } per turn.`
+        );
+        return;
+      }
+      WORLD.apiUsed.direction += 1;
       WORLD.location.x = WORLD.location.x - 1;
     },
     down: function () {
+      if (
+        WORLD.rateLimits.direction &&
+        WORLD.apiUsed.direction === WORLD.rateLimits.direction
+      ) {
+        console.log(
+          `You can use direction only ${WORLD.rateLimits.direction} time${
+            WORLD.rateLimits.direction > 1 ? "s" : ""
+          } per turn.`
+        );
+        return;
+      }
+      WORLD.apiUsed.direction += 1;
       WORLD.location.x = WORLD.location.x + 1;
     },
     right: function () {
+      if (
+        WORLD.rateLimits.direction &&
+        WORLD.apiUsed.direction === WORLD.rateLimits.direction
+      ) {
+        console.log(
+          `You can use direction only ${WORLD.rateLimits.direction} time${
+            WORLD.rateLimits.direction > 1 ? "s" : ""
+          } per turn.`
+        );
+        return;
+      }
+      WORLD.apiUsed.direction += 1;
       WORLD.location.y = WORLD.location.y + 1;
     },
     left: function () {
+      if (
+        WORLD.rateLimits.direction &&
+        WORLD.apiUsed.direction === WORLD.rateLimits.direction
+      ) {
+        console.log(
+          `You can use direction only ${WORLD.rateLimits.direction} time${
+            WORLD.rateLimits.direction > 1 ? "s" : ""
+          } per turn.`
+        );
+        return;
+      }
+      WORLD.apiUsed.direction += 1;
       WORLD.location.y = WORLD.location.y - 1;
     },
   };
@@ -405,6 +493,8 @@ function App() {
       return WORLD.pedestrians.map((p) => {
         const ped = JSON.parse(JSON.stringify(p)) as Pedestrian;
         ped.target = undefined;
+        ped.moveIndex = undefined;
+        ped.moves = undefined;
         return ped;
       }); // filter these folks a bit
     },
@@ -432,6 +522,7 @@ function App() {
     ) => void
   ) {
     WORLD.previousLocation = { x: WORLD.location.x, y: WORLD.location.y }; // update previous location before running user code
+    WORLD.apiUsed.direction = 0;
     userCode(direction, gps, sensor, dataStore); // run user code
     simulateWorld();
     setPedestrians(WORLD.pedestrians);
@@ -479,7 +570,7 @@ function App() {
     // save to local storage
     localStorage.setItem(getApiPath(), code);
     const exec = `${code}
-    gameLoop`;
+    ${WORLD.metadata.executeOnce ? "main" : "gameLoop"}`;
     let userCode = ts.transpile(exec);
     setSimulating(true);
     setUserCode(userCode);
@@ -489,6 +580,7 @@ function App() {
     const grid = JSON.parse(JSON.stringify(WORLD.original_grid));
     WORLD.pedestrians = [];
     WORLD.data = {};
+    WORLD.apiUsed.direction = 0;
     for (let i = 0; i < grid.length; i++) {
       const row = grid[i];
       for (let j = 0; j < row.length; j++) {
@@ -501,23 +593,24 @@ function App() {
           setTarget({ x: i, y: j });
           WORLD.target = { x: i, y: j };
         }
-        if (row[j] === "P") {
+        if (row[j].startsWith("P")) {
+          const target = row[j] === "PX";
+          let moves: Pedestrian["direction"][] = [];
+          if (row[j].length > 0) {
+            const pedKey = row[j].substr(1);
+            if (WORLD.metadata.pedMoves && WORLD.metadata.pedMoves[pedKey]) {
+              moves = WORLD.metadata.pedMoves[pedKey];
+            }
+          }
           WORLD.pedestrians.push({
             location: {
               x: i,
               y: j,
             },
             direction: "static",
-          });
-          row[j] = ".";
-        } else if (row[j] === "PX") {
-          WORLD.pedestrians.push({
-            location: {
-              x: i,
-              y: j,
-            },
-            direction: "static",
-            target: true,
+            target,
+            moves,
+            moveIndex: 0,
           });
           row[j] = ".";
         }
@@ -540,8 +633,7 @@ function App() {
         simulating={simulating}
         result={result}
         nextLevel={() => {
-          const level = parseInt(window.location.pathname.split("/")[1]);
-          window.location.pathname = `/${level + 1}`;
+          window.location.pathname = WORLD.metadata.nextLevel;
         }}
       />
     </div>

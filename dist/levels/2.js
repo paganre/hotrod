@@ -1,82 +1,117 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_CODE = exports.GRID = void 0;
-exports.GRID = [
-    ["W", "W", " ", " ", " ", "W", "W", "W", "W", "W"],
-    ["W", "W", " ", "W", " ", "W", "W", "W", "W", "W"],
-    ["W", "W", " ", "W", " ", "W", "W", "E", " ", " "],
-    ["W", "W", " ", "W", " ", "W", "W", "W", "W", " "],
-    ["W", "W", " ", "W", " ", "W", "W", "W", "W", " "],
-    ["W", "W", " ", "W", " ", "W", "W", "W", "W", " "],
-    ["W", "W", " ", "W", " ", "W", "W", "W", "W", " "],
-    ["W", "W", " ", "W", " ", "W", " ", " ", " ", " "],
-    ["W", "W", " ", "W", " ", "W", " ", "W", "W", "W"],
-    ["W", "W", " ", "W", " ", "W", " ", "W", "W", "W"],
-    ["W", "W", " ", "W", " ", "W", " ", "W", "W", "W"],
-    ["W", "W", " ", "W", " ", "W", " ", "W", "W", "W"],
-    ["W", "W", " ", "W", " ", "W", " ", "W", "W", "W"],
-    ["W", "W", " ", "W", " ", "W", " ", "W", "W", "W"],
-    ["W", "W", " ", "W", " ", "W", " ", "W", "W", "W"],
-    ["W", "W", " ", "W", " ", " ", " ", "W", "W", "W"],
-    ["W", "W", "S", "W", "W", "W", "W", "W", "W", "W"],
-];
+exports.DEFAULT_CODE = exports.METADATA = exports.GRID = void 0;
+function randomIntInclusive(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
+}
+function toKey(point) {
+    return `${point.x},${point.y}`;
+}
+const width = 30;
+const height = 30;
+function randomPoint() {
+    return {
+        x: randomIntInclusive(0, width - 1),
+        y: randomIntInclusive(0, height - 1),
+    };
+}
+const start = randomPoint();
+const pedCount = 30;
+const spy = randomIntInclusive(0, 29);
+const exists = new Set([toKey(start)]);
+for (let i = 0; i < pedCount; i++) {
+    while (true) {
+        const p = randomPoint();
+        if (!exists.has(toKey(p))) {
+            exists.add(toKey(p));
+            break;
+        }
+    }
+}
+exports.GRID = [];
+let c = 0;
+for (let i = 0; i < height; i++) {
+    const row = [];
+    for (let j = 0; j < width; j++) {
+        if (exists.has(toKey({ x: i, y: j }))) {
+            if (i == start.x && j == start.y) {
+                row.push("S");
+            }
+            else {
+                if (c === spy) {
+                    row.push("PX");
+                }
+                else {
+                    row.push("P");
+                }
+                c += 1;
+            }
+        }
+        else {
+            row.push(" ");
+        }
+    }
+    exports.GRID.push(row);
+}
+exports.GRID[start.x][start.y] = "S";
+exports.METADATA = {
+    Sensor: {
+        isTargetClose: 10,
+    },
+};
 exports.DEFAULT_CODE = `/**
- * Alright, that was easy! 
- * Now let's do a maze that is a little bit more complicated.
- * First, let's define some essentials.
+ * Alright! Let's shift gears and play capture the flag.
+ * 
+ * One of the Pedestrians here is not a real pedestrian, but a spy.
+ * He stole the plans of your Sensor and now you need to retrieve it back.
+ * 
+ * Unfortunately, your sensor is not powerful enough to know which Pedestrian is the spy.
+ * However, it is able to sense if the stolen plans are within 10 squares of you,
+ * using Manhattan Distance (see "https://en.wikipedia.org/wiki/Taxicab_geometry").
+ * 
+ * Rules of the game:
+ * [1] You need to catch the spy by running into their location.
+ * [2] If you are static and the Spy enters your location, you do not win.
+ * [3] If you run into any other Pedestrian you lose.
+ * [4] If a Pedestrian runs into you while you are not moving, you do not lose.
+ * 
+ * Try to win at the shortest time possible!
  **/
 
 /**
- * First one is the "Point", which corresponds to a point on the grid.
- * "x" is the row and "y" is the column.
- * Top left corner of the grid is (0,0).
- * As you go down "x" increases and as you go right "y" increases.
- **/
-type Point = {
-    x: number // row. increases as you go down on the grid.
-    y: number // column. increases as you go right on the grid.
-}
-
-/**
- * Now, on top of the Direction, let's define a few more APIs you can use.
- * GPS gives information about the world.
- * You can get your location, or your target's location.
- **/
-type GPS = {
-    getLocation: () => Point // Gets your hot-rod's location.
-    getTarget: () => Point // Gets your target location.
-}
-
-/**
- * Sensor API gives you information about your immediate surroundings.
+ * Your Sensor is ugpraded!
  **/
 type Sensor = {
-    /**
-     * Returns a list of available roads immediately around you,
-     * in the 4 squares you can move.
-     **/ 
+    isTargetClose: () => boolean; // Returns "true" if the spy is within 10 squares of you.
+    getPedestrians: () => Pedestrian[]; // Returns the Pedestrians on the map.
     getRoads: () => Point[] 
 }
+type GPS = {
+    getBounds: () => Point
+    getLocation: () => Point
+}
 
-/** 
- * Last one is the DataStore.
- * You can use it to store and use data in subsequent game-loop calls. 
- * You will need to handle the serialization and deserialization of data,
- * as it only accepts and returns strings.
- **/
 type DataStore = {
-    has(key: string): boolean // returns if the key is in the data store.
-    get(key: string): string | undefined // returns the value of the key if it exists.
-    set(key: string, value: string): void // sets the value for the key.
+    has(key: string): boolean
+    get(key: string): string | undefined
+    set(key: string, value: string): void
 };
-  
 
-// And our old friend Direction
 type Direction = {
     up: () => void 
     left: () => void
     down: () => void 
     right: () => void
+}
+
+type Pedestrian = {
+    location: Point;
+    direction: "up" | "down" | "left" | "right" | "static";
+};
+
+type Point = {
+    x: number
+    y: number
 }
   
 // Game loop: your code goes here!

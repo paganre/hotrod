@@ -12,6 +12,20 @@ const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use((0, cors_1.default)());
 app.use(express_1.default.static(path_1.default.resolve(__dirname, "../client/build")));
+app.get("/api/playground/:id", (req, res) => {
+    const { id } = req.params;
+    try {
+        const lvl = require(`./levels/playground/${id}`);
+        res.json({
+            grid: lvl.GRID,
+            code: lvl.DEFAULT_CODE,
+            metadata: lvl.METADATA ? lvl.METADATA : {},
+        });
+    }
+    catch (ex) {
+        res.send(404);
+    }
+});
 app.get("/api/:id", (req, res) => {
     const { id } = req.params;
     try {
