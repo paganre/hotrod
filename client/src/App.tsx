@@ -177,6 +177,7 @@ function CodeEditor(props: CodeEditorProps) {
             height="90vh"
             defaultLanguage="typescript"
             defaultValue={defaultCode}
+            value={code}
             onChange={(val) => {
               if (val) {
                 setCode(val);
