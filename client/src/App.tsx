@@ -574,13 +574,22 @@ function App() {
     if (!userCode || !simulating) {
       return;
     }
-    const userFunc: (
-      direction: Direction,
-      gps: GPS,
-      sensor: Sensor,
-      data: DataStore
-    ) => void = eval(userCode);
-    gameLoop(userFunc);
+    try {
+      const userFunc: (
+        direction: Direction,
+        gps: GPS,
+        sensor: Sensor,
+        data: DataStore
+      ) => void = eval(userCode);
+      gameLoop(userFunc);
+    } catch (e) {
+      setSimulating(false);
+      if (e instanceof SyntaxError || e instanceof ReferenceError) {
+        setResult({ result: `Code error - ${e.message}`, won: false });
+      } else {
+        setResult({ result: `Code error`, won: false });
+      }
+    }
   }, [userCode, simulating]);
 
   const startSimulation = function (code: string) {
