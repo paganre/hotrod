@@ -110,10 +110,13 @@ type Result = {
 };
 
 function CodeEditor(props: CodeEditorProps) {
-  let defaultCode = localStorage.getItem(getApiPath());
-  if (!defaultCode) {
-    defaultCode = props.defaultCode;
-  }
+  let defaultCode = props.defaultCode;
+  React.useEffect(() => {
+    let defaultCode = localStorage.getItem(getApiPath());
+    if (!defaultCode) {
+      defaultCode = props.defaultCode;
+    }
+  }, [props.defaultCode]);
   const [code, setCode] = useState(defaultCode);
   return (
     <div className="hot-rod-code-editor">
