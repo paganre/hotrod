@@ -142,7 +142,18 @@ function CodeEditor(props: CodeEditorProps) {
               props.reset();
             }}
           >
-            Reset
+            Restart
+          </button>
+        )}
+        {!props.simulating && (
+          <button
+            style={{ marginLeft: 10 }}
+            className="run-code"
+            onClick={() => {
+              setCode(props.defaultCode);
+            }}
+          >
+            Reset Code
           </button>
         )}
         {props.result && (
