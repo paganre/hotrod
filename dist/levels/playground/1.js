@@ -2,15 +2,15 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.METADATA = exports.DEFAULT_CODE = exports.GRID = void 0;
 exports.GRID = [
-  ["W", "W", "W", "W", "W", "W", "W", "W", "W"],
-  ["W", " ", " ", " ", "E", " ", " ", " ", " "],
-  ["W", " ", " ", " ", " ", " ", " ", " ", " "],
-  ["W", " ", " ", " ", " ", " ", " ", " ", " "],
-  ["W", " ", " ", " ", " ", " ", " ", " ", " "],
-  ["W", " ", " ", " ", " ", " ", " ", " ", " "],
-  ["W", " ", " ", " ", " ", " ", " ", " ", " "],
-  ["W", " ", " ", " ", "S", " ", " ", " ", " "],
-  ["W", "W", "W", "W", "W", "W", "W", "W", "W"],
+    ["W", "W", "W", "W", "W", "W", "W", "W", "W"],
+    ["W", " ", " ", " ", "E", " ", " ", " ", " "],
+    ["W", " ", " ", " ", " ", " ", " ", " ", " "],
+    ["W", " ", " ", " ", " ", " ", " ", " ", " "],
+    ["W", " ", " ", " ", " ", " ", " ", " ", " "],
+    ["W", " ", " ", " ", " ", " ", " ", " ", " "],
+    ["W", " ", " ", " ", " ", " ", " ", " ", " "],
+    ["W", " ", " ", " ", "S", " ", " ", " ", " "],
+    ["W", "W", "W", "W", "W", "W", "W", "W", "W"],
 ];
 exports.DEFAULT_CODE = `/**
 * Welcome to HotRod.
@@ -20,7 +20,7 @@ exports.DEFAULT_CODE = `/**
 
 /**
  * Direction is how you control HotRod.
- * Which is (you guessed it) the red dot.
+ * Which is (you guessed it) the red dot in the center.
  * Here is the API:
  **/
 type Direction = {
@@ -39,9 +39,9 @@ function main(direction: Direction) {
 }
 `;
 exports.METADATA = {
-  executeOnce: true,
-  nextLevel: "/playground/2",
-  rateLimitOverrides: {
-    direction: 0,
-  },
+    executeOnce: true,
+    nextLevel: "/playground/2",
+    rateLimitOverrides: {
+        direction: 0,
+    },
 };

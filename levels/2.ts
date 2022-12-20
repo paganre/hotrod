@@ -21,8 +21,8 @@ function randomPoint() {
 }
 
 const start: Point = randomPoint();
-const pedCount = 30;
-const spy = randomIntInclusive(0, 29);
+const pedCount = 1;
+const spy = 0;
 const exists = new Set([toKey(start)]);
 for (let i = 0; i < pedCount; i++) {
   while (true) {
@@ -59,36 +59,23 @@ for (let i = 0; i < height; i++) {
 GRID[start.x][start.y] = "S";
 
 export const METADATA = {
-  Sensor: {
-    isTargetClose: 10,
-  },
+  nextLevel: "/3",
 };
 
 export const DEFAULT_CODE: string = `/**
  * Alright! Let's shift gears and play capture the flag.
- * 
- * One of the Pedestrians here is not a real pedestrian, but a spy.
- * He stole the plans of your Sensor and now you need to retrieve it back.
- * 
- * Unfortunately, your sensor is not powerful enough to know which Pedestrian is the spy.
- * However, it is able to sense if the stolen plans are within 10 squares of you,
- * using Manhattan Distance (see "https://en.wikipedia.org/wiki/Taxicab_geometry").
+ * Right now, the Pedestrian is the target and we want to catch them.
  * 
  * Rules of the game:
- * [1] You need to catch the spy by running into their location.
- * [2] If you are static and the Spy enters your location, you do not win.
- * [3] If you run into any other Pedestrian you lose.
- * [4] If a Pedestrian runs into you while you are not moving, you do not lose.
+ * [1] You have to catch the target by moving into the same Point.
+ * [2] If you do not move and they mvoe into the same Point as you, you do not win.
+ * [3] You lose if you move out of bounds.
  * 
- * Try to win at the shortest time possible!
+ * Try to win with the least number of moves as possible!
  **/
 
-/**
- * Your Sensor is ugpraded!
- **/
 type Sensor = {
-    isTargetClose: () => boolean; // Returns "true" if the spy is within 10 squares of you.
-    getPedestrians: () => Pedestrian[]; // Returns the Pedestrians on the map.
+    getPedestrians: () => Pedestrian[]
     getRoads: () => Point[] 
 }
 type GPS = {

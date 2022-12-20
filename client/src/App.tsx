@@ -30,9 +30,11 @@ type Pedestrian = {
   target?: boolean;
   moves?: Pedestrian["direction"][];
   moveIndex?: number;
+  highlighted?: boolean;
 };
 
 type Sensor = {
+  highlightPedestrian: (index: number) => void; // Highlights the Pedestrian purple
   isTargetClose: () => boolean; // Returns "true" if the target is close.
   getRoads: () => Point[]; // Returns a list of available roads around you
   getPedestrians: () => Pedestrian[]; // Returns a list of pedestrians around you
@@ -56,15 +58,19 @@ function manhattanDistance(p1: Point, p2: Point) {
 
 function Simulation(props: SimulationProps) {
   function renderCell(cell: string, j: number, i: number) {
-    const hasPed =
-      props.pedestrians.filter((p) => p.location.x === i && p.location.y === j)
-        .length > 0;
+    const peds = props.pedestrians.filter(
+      (p) => p.location.x === i && p.location.y === j
+    );
+    const pedClass =
+      peds.filter((p) => p.highlighted).length > 0
+        ? "pedestrian pedestrian-highlighted"
+        : "pedestrian";
     return (
       <div className={`cell cell-${cell}`} key={j}>
         {props.location.x === i && props.location.y === j && (
           <div className="hot-rod" />
         )}
-        {hasPed && <div className="pedestrian" />}
+        {peds.length > 0 && <div className={pedClass} />}
       </div>
     );
   }
@@ -92,11 +98,16 @@ function Simulation(props: SimulationProps) {
 interface CodeEditorProps {
   defaultCode: string;
   simulating: boolean;
-  result: string;
+  result?: Result;
   runCode: (code: string) => void;
   reset: () => void;
   nextLevel: () => void;
 }
+
+type Result = {
+  result: string;
+  won: boolean;
+};
 
 function CodeEditor(props: CodeEditorProps) {
   let defaultCode = localStorage.getItem(getApiPath());
@@ -111,7 +122,7 @@ function CodeEditor(props: CodeEditorProps) {
         {props.simulating ? (
           <div style={{ marginLeft: 10 }}>Running...</div>
         ) : (
-          !props.result && (
+          !props.result?.result && (
             <button
               style={{ marginLeft: 10 }}
               className="run-code"
@@ -123,7 +134,7 @@ function CodeEditor(props: CodeEditorProps) {
             </button>
           )
         )}
-        {!props.simulating && props.result && (
+        {!props.simulating && props.result?.result && (
           <button
             style={{ marginLeft: 10 }}
             className="run-code"
@@ -134,8 +145,10 @@ function CodeEditor(props: CodeEditorProps) {
             Reset
           </button>
         )}
-        {props.result && <div style={{ marginLeft: 10 }}>{props.result}</div>}
-        {props.result === "won" && (
+        {props.result && (
+          <div style={{ marginLeft: 10 }}>{props.result.result}</div>
+        )}
+        {props.result?.won && (
           <button
             style={{ marginLeft: 10 }}
             className="next-level"
@@ -170,24 +183,27 @@ function CodeEditor(props: CodeEditorProps) {
 const checkEndCondition = function (
   loc: Point,
   gr: string[][]
-): { ended: boolean; result: string } {
+): { ended: boolean; result: string; won: boolean } {
   if (loc.x < 0 || loc.y < 0 || loc.x >= gr.length || loc.y >= gr[0].length) {
     return {
       ended: true,
-      result: "out of bounds",
+      result: "Game Over. You are out of bounds.",
+      won: false,
     };
   } else {
     const r = gr[loc.x][loc.y];
     if (r === "E") {
       return {
         ended: true,
-        result: "won",
+        result: "You win!",
+        won: true,
       };
     }
     if (r === "W") {
       return {
         ended: true,
-        result: "lost",
+        result: "Game Over. You hit a wall.",
+        won: false,
       };
     }
   }
@@ -206,18 +222,21 @@ const checkEndCondition = function (
       if (targets.length === peds.length) {
         return {
           ended: true,
-          result: "won - found the target!",
+          result: "Nice! Caught the target!",
+          won: true,
         };
       }
       return {
         ended: true,
-        result: "lost - hit a pedestrian!",
+        result: "Game Over. You hit a Pedestrian.",
+        won: true,
       };
     }
   }
   return {
     ended: WORLD.metadata.executeOnce ? true : false,
-    result: WORLD.metadata.executeOnce ? "Could not reach it!" : "",
+    result: WORLD.metadata.executeOnce ? "Can't reach it!" : "",
+    won: false,
   };
 };
 
@@ -330,7 +349,6 @@ const getApiPath = function (): string {
       .split("/")
       .splice(1)
       .join("/");
-    console.log(currentQuestion);
     if (isCurrentQuestionLater(currentQuestion, lastQuestion)) {
       // update last question
       localStorage.setItem("lastQuestion", currentQuestion);
@@ -342,7 +360,7 @@ const getApiPath = function (): string {
 function App() {
   const [grid, setGrid] = React.useState<string[][]>([]);
   const [simulating, setSimulating] = React.useState<boolean>(false);
-  const [result, setResult] = React.useState<string>("");
+  const [result, setResult] = React.useState<Result>();
   const [location, setLocation] = React.useState<Point>({ x: 0, y: 0 });
   const [target, setTarget] = React.useState<Point>({ x: 0, y: 0 });
   const [userCode, setUserCode] = React.useState("");
@@ -359,48 +377,8 @@ function App() {
             WORLD.metadata.rateLimitOverrides.direction;
         }
         WORLD.original_grid = JSON.parse(JSON.stringify(data.grid));
-        for (let i = 0; i < data.grid.length; i++) {
-          const row = data.grid[i];
-          for (let j = 0; j < row.length; j++) {
-            if (row[j] === "S") {
-              setLocation({ x: i, y: j });
-              WORLD.location = { x: i, y: j };
-              WORLD.previousLocation = { x: i, y: j };
-            }
-            if (row[j] === "E") {
-              setTarget({ x: i, y: j });
-              WORLD.target = { x: i, y: j };
-            }
-            if (row[j].startsWith("P")) {
-              const target = row[j] === "PX";
-              let moves: Pedestrian["direction"][] = [];
-              if (row[j].length > 0) {
-                const pedKey = row[j].substr(1);
-                if (
-                  WORLD.metadata.pedMoves &&
-                  WORLD.metadata.pedMoves[pedKey]
-                ) {
-                  moves = WORLD.metadata.pedMoves[pedKey];
-                }
-              }
-              WORLD.pedestrians.push({
-                location: {
-                  x: i,
-                  y: j,
-                },
-                direction: "static",
-                target,
-                moves,
-                moveIndex: 0,
-              });
-              row[j] = ".";
-            }
-          }
-        }
         setDefaultCode(data.code);
-        setGrid(data.grid);
-        setPedestrians(WORLD.pedestrians);
-        WORLD.grid = data.grid;
+        resetWithGrid(JSON.parse(JSON.stringify(WORLD.original_grid)));
       });
   }, []);
 
@@ -483,6 +461,9 @@ function App() {
   };
 
   const sensor: Sensor = {
+    highlightPedestrian: function (index: number) {
+      WORLD.pedestrians[index].highlighted = true;
+    },
     isTargetClose: function () {
       if (WORLD.metadata.Sensor?.isTargetClose) {
         const coverage = WORLD.metadata.Sensor.isTargetClose;
@@ -550,7 +531,16 @@ function App() {
   ) {
     WORLD.previousLocation = { x: WORLD.location.x, y: WORLD.location.y }; // update previous location before running user code
     WORLD.apiUsed.direction = 0;
-    userCode(direction, gps, sensor, dataStore); // run user code
+    try {
+      userCode(direction, gps, sensor, dataStore); // run user code
+    } catch (e) {
+      setSimulating(false);
+      if (e instanceof SyntaxError || e instanceof ReferenceError) {
+        setResult({ result: `Code error - ${e.message}`, won: false });
+      } else {
+        setResult({ result: `Code error`, won: false });
+      }
+    }
     simulateWorld();
     setPedestrians(WORLD.pedestrians);
     setLocation({ x: WORLD.location.x, y: WORLD.location.y });
@@ -561,7 +551,7 @@ function App() {
       return;
     }
     // check if the game has ended
-    const { ended, result } = checkEndCondition(location, grid);
+    const { ended, result, won } = checkEndCondition(location, grid);
     if (!ended) {
       const userFunc: (
         direction: Direction,
@@ -576,7 +566,7 @@ function App() {
     } else {
       // end the game
       setSimulating(false);
-      setResult(result);
+      setResult({ result, won });
     }
   }, [location]);
 
@@ -603,8 +593,7 @@ function App() {
     setUserCode(userCode);
   };
 
-  const reset = function () {
-    const grid = JSON.parse(JSON.stringify(WORLD.original_grid));
+  const resetWithGrid = function (grid: string[][]) {
     WORLD.pedestrians = [];
     WORLD.data = {};
     WORLD.apiUsed.direction = 0;
@@ -647,7 +636,11 @@ function App() {
     setGrid(grid);
     setPedestrians(WORLD.pedestrians);
     setSimulating(false);
-    setResult("");
+    setResult({ result: "", won: false });
+  };
+
+  const reset = function () {
+    resetWithGrid(JSON.parse(JSON.stringify(WORLD.original_grid)));
   };
 
   return (

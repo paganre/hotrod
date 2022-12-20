@@ -63,7 +63,7 @@
 .next-level {
   float: right;
   background-color: green;
-  font: white;
+  color: white;
 }
 
 .hot-rod-grid {
@@ -117,4 +117,12 @@
   width: 6px;
   height: 6px;
   background-color: black;
+}
+
+.pedestrian-highlighted {
+  background-color: purple;
+  height: 20px;
+  width: 20px;
+  position: absolute;
+  z-index: -1;
 }
