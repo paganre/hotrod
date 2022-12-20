@@ -294,17 +294,44 @@ const simulateWorld = function () {
   }
 };
 
+const isCurrentQuestionLater = function (
+  currentQuestion: string,
+  lastQuestion: string
+): boolean {
+  if (lastQuestion === "playground") {
+    return true;
+  }
+  const currentlyInPlayground = currentQuestion.startsWith("playground/");
+  const lastlyInPlayground = lastQuestion.startsWith("playground/");
+  if (currentlyInPlayground && lastlyInPlayground) {
+    return (
+      parseInt(currentQuestion.split("/")[1]) >
+      parseInt(lastQuestion.split("/")[1])
+    );
+  } else if (currentlyInPlayground && !lastlyInPlayground) {
+    return false;
+  } else if (!currentlyInPlayground && lastlyInPlayground) {
+    return true;
+  } else {
+    try {
+      return parseInt(currentQuestion) > parseInt(lastQuestion);
+    } catch (error) {
+      return true;
+    }
+  }
+};
+
 const getApiPath = function (): string {
   const lastQuestion = localStorage.getItem("lastQuestion") || "playground/1";
   if (window.location.pathname === "/") {
     window.location.pathname = `/${lastQuestion}`;
   } else {
-    const currentQuestion = window.location.pathname.split("/")[1];
-    if (
-      !currentQuestion.startsWith("playground") &&
-      !lastQuestion.startsWith("playground") &&
-      parseInt(currentQuestion) > parseInt(lastQuestion)
-    ) {
+    const currentQuestion = window.location.pathname
+      .split("/")
+      .splice(1)
+      .join("/");
+    console.log(currentQuestion);
+    if (isCurrentQuestionLater(currentQuestion, lastQuestion)) {
       // update last question
       localStorage.setItem("lastQuestion", currentQuestion);
     }
