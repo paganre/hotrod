@@ -147,8 +147,7 @@ function CodeEditor(props: CodeEditorProps) {
         )}
         {!props.simulating && (
           <button
-            style={{ marginLeft: 10 }}
-            className="run-code"
+            className="reset-code"
             onClick={() => {
               setCode(props.defaultCode);
             }}
@@ -241,7 +240,7 @@ const checkEndCondition = function (
       return {
         ended: true,
         result: "Game Over. You hit a Pedestrian.",
-        won: true,
+        won: false,
       };
     }
   }

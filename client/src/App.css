@@ -59,11 +59,15 @@
 .run-code {
   float: right;
 }
+.reset-code {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+}
 
 .next-level {
   float: right;
-  background-color: green;
-  color: white;
+  color: green;
 }
 
 .hot-rod-grid {

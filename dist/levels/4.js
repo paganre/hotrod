@@ -63,10 +63,16 @@ exports.DEFAULT_CODE = `/**
 * Let's stress test your algorithm to the previous question.
 * 
 * Spy is in the Times Square on New Year's eve.
-* Rules of the game is exactly the same.
-* But tt might be a bit crowded.
+* Rules of the game is exactly the same, but it is a bit more crowded.
 **/
+
+/**
+ * Your Sensor is upgraded once more.
+ * You can now highlight a Pedestrian to see them better on the map.
+ * Use this once you think you have identified the Spy.
+ **/
 type Sensor = {
+    highlightPedestrian: (index: number) => void // Highlights the Pedestrian
     isTargetClose: () => boolean;
     getPedestrians: () => Pedestrian[]
     getRoads: () => Point[] 
