@@ -62,6 +62,7 @@ export const METADATA = {
   Sensor: {
     isTargetClose: 10,
   },
+  nextLevel: "/5",
 };
 
 export const DEFAULT_CODE: string = `/**

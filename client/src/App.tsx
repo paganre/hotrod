@@ -1,278 +1,28 @@
-import Editor from "@monaco-editor/react";
-import React, { useState } from "react";
+import React from "react";
 import ts from "typescript";
 import "./App.css";
+import CanvasSimulation from "./CanvasSimulation";
+import CodeEditor from "./CodeEditor";
+import { canvasHash, getApiInputPath, getApiPath } from "./helpers/apiHelpers";
+import { manhattanDistance } from "./helpers/pointHelpers";
+import { checkEndCondition, simulateWorld } from "./helpers/simulationHelpers";
+import Simulation from "./Simulation";
+import {
+  DataStore,
+  Direction,
+  GPS,
+  Input,
+  KeyValue,
+  Pedestrian,
+  Point,
+  Printer,
+  Result,
+  Sensor,
+  World,
+  WorldMetadata,
+} from "./types";
 
-type Point = {
-  x: number;
-  y: number;
-};
-
-type Direction = {
-  up: () => void;
-  left: () => void;
-  down: () => void;
-  right: () => void;
-};
-
-type GPS = {
-  getLocation: () => Point; // Gets your hot-rod's location
-  getTarget: () => Point; // Gets your target location, if any
-  getBounds: () => {
-    x: number; // Maximum x value
-    y: number; // Maximum y value
-  };
-};
-
-type Pedestrian = {
-  location: Point;
-  direction: "up" | "down" | "left" | "right" | "static";
-  target?: boolean;
-  moves?: Pedestrian["direction"][];
-  moveIndex?: number;
-  highlighted?: boolean;
-};
-
-type Sensor = {
-  highlightPedestrian: (index: number) => void; // Highlights the Pedestrian purple
-  isTargetClose: () => boolean; // Returns "true" if the target is close.
-  getRoads: () => Point[]; // Returns a list of available roads around you
-  getPedestrians: () => Pedestrian[]; // Returns a list of pedestrians around you
-};
-
-type DataStore = {
-  has(key: string): boolean;
-  get(key: string): string;
-  set(key: string, value: string): void;
-}; // You can use it to store and use data
-
-interface SimulationProps {
-  grid: string[][];
-  pedestrians: Pedestrian[];
-  location: Point;
-}
-
-function manhattanDistance(p1: Point, p2: Point) {
-  return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
-}
-
-function Simulation(props: SimulationProps) {
-  function renderCell(cell: string, j: number, i: number) {
-    const peds = props.pedestrians.filter(
-      (p) => p.location.x === i && p.location.y === j
-    );
-    const pedClass =
-      peds.filter((p) => p.highlighted).length > 0
-        ? "pedestrian pedestrian-highlighted"
-        : "pedestrian";
-    return (
-      <div className={`cell cell-${cell}`} key={j}>
-        {props.location.x === i && props.location.y === j && (
-          <div className="hot-rod" />
-        )}
-        {peds.length > 0 && <div className={pedClass} />}
-      </div>
-    );
-  }
-  function renderRow(row: string[], index: number) {
-    const cells = row.map((row, j) => renderCell(row, j, index));
-    return (
-      <div className="row" key={index}>
-        {cells}
-      </div>
-    );
-  }
-  function renderGrid() {
-    const rows = props.grid.map(renderRow);
-    return <div className="hot-rod-grid">{rows}</div>;
-  }
-
-  return (
-    <div className="hot-rod-simulation">
-      <div className="section-title">Simulation</div>
-      {props.grid.length > 0 && renderGrid()}
-    </div>
-  );
-}
-
-interface CodeEditorProps {
-  defaultCode: string;
-  simulating: boolean;
-  result?: Result;
-  runCode: (code: string) => void;
-  reset: () => void;
-  nextLevel: () => void;
-}
-
-type Result = {
-  result: string;
-  won: boolean;
-};
-
-function CodeEditor(props: CodeEditorProps) {
-  const [code, setCode] = useState("");
-  React.useEffect(() => {
-    if (code === "") {
-      let defaultCode = localStorage.getItem(getApiPath());
-      if (!defaultCode) {
-        defaultCode = props.defaultCode;
-      }
-      setCode(defaultCode);
-    }
-  }, [code, props.defaultCode]);
-
-  return (
-    <div className="hot-rod-code-editor">
-      <div style={{ display: "flex" }}>
-        <div className="section-title">Editor</div>
-        {props.simulating ? (
-          <div style={{ marginLeft: 10 }}>Running...</div>
-        ) : (
-          !props.result?.result && (
-            <button
-              style={{ marginLeft: 10 }}
-              className="run-code"
-              onClick={() => {
-                props.runCode(code);
-              }}
-            >
-              Run
-            </button>
-          )
-        )}
-        {!props.simulating && props.result?.result && (
-          <button
-            style={{ marginLeft: 10 }}
-            className="run-code"
-            onClick={() => {
-              props.reset();
-            }}
-          >
-            Restart
-          </button>
-        )}
-        {!props.simulating && (
-          <button
-            className="reset-code"
-            onClick={() => {
-              setCode(props.defaultCode);
-            }}
-          >
-            Reset Code
-          </button>
-        )}
-        {props.result && (
-          <div style={{ marginLeft: 10 }}>{props.result.result}</div>
-        )}
-        {props.result?.won && (
-          <button
-            style={{ marginLeft: 10 }}
-            className="next-level"
-            onClick={() => {
-              props.nextLevel();
-            }}
-          >
-            Next Level
-          </button>
-        )}
-      </div>
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <div style={{ marginTop: 20 }}>
-          <Editor
-            height="90vh"
-            defaultLanguage="typescript"
-            value={code}
-            onChange={(val) => {
-              if (val) {
-                setCode(val);
-              }
-            }}
-            line={16}
-            theme="vs-dark"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const checkEndCondition = function (
-  loc: Point,
-  gr: string[][]
-): { ended: boolean; result: string; won: boolean } {
-  if (loc.x < 0 || loc.y < 0 || loc.x >= gr.length || loc.y >= gr[0].length) {
-    return {
-      ended: true,
-      result: "Game Over. You are out of bounds.",
-      won: false,
-    };
-  } else {
-    const r = gr[loc.x][loc.y];
-    if (r === "E") {
-      return {
-        ended: true,
-        result: "You win!",
-        won: true,
-      };
-    }
-    if (r === "W") {
-      return {
-        ended: true,
-        result: "Game Over. You hit a wall.",
-        won: false,
-      };
-    }
-  }
-  if (
-    !(
-      WORLD.previousLocation.x === WORLD.location.x &&
-      WORLD.previousLocation.y === WORLD.location.y
-    )
-  ) {
-    // hot rod moved this turn
-    const peds = WORLD.pedestrians.filter(
-      (p) => p.location.x === loc.x && p.location.y === loc.y
-    );
-    if (peds.length) {
-      const targets = peds.filter((p) => p.target);
-      if (targets.length === peds.length) {
-        return {
-          ended: true,
-          result: "Nice! Caught the target!",
-          won: true,
-        };
-      }
-      return {
-        ended: true,
-        result: "Game Over. You hit a Pedestrian.",
-        won: false,
-      };
-    }
-  }
-  return {
-    ended: WORLD.metadata.executeOnce ? true : false,
-    result: WORLD.metadata.executeOnce ? "Can't reach it!" : "",
-    won: false,
-  };
-};
-
-type KeyValue = { [key: string]: string };
-
-type WorldMetadata = {
-  nextLevel: string;
-  Sensor?: {
-    isTargetClose?: number;
-  };
-  rateLimitOverrides?: {
-    direction?: number;
-  };
-  executeOnce?: boolean;
-  pedMoves?: {
-    [key: string]: Pedestrian["direction"][];
-  };
-};
-
-const WORLD = {
+const WORLD: World = {
   metadata: {} as WorldMetadata,
   location: { x: 0, y: 0 } as Point,
   previousLocation: { x: 0, y: 0 } as Point,
@@ -287,94 +37,15 @@ const WORLD = {
   apiUsed: {
     direction: 0,
   },
-};
-
-const simulateWorld = function () {
-  for (const ped of WORLD.pedestrians) {
-    switch (ped.direction) {
-      case "down":
-        if (ped.location.x < WORLD.grid.length - 1) {
-          ped.location.x += 1;
-        }
-        break;
-      case "up":
-        if (ped.location.x > 0) {
-          ped.location.x -= 1;
-        }
-        break;
-      case "left":
-        if (ped.location.y > 0) {
-          ped.location.y -= 1;
-        }
-        break;
-      case "right":
-        if (ped.location.y < WORLD.grid[0].length - 1) {
-          ped.location.y += 1;
-        }
-        break;
-    }
-    const dirs = [
-      "up",
-      "down",
-      "left",
-      "right",
-      "static",
-    ] as Pedestrian["direction"][];
-    if (ped.moves && ped.moves.length > 0 && ped.moveIndex !== undefined) {
-      ped.direction = ped.moves[ped.moveIndex];
-      ped.moveIndex = (ped.moveIndex + 1) % ped.moves.length;
-    } else {
-      ped.direction = dirs[Math.floor(Math.random() * dirs.length)];
-    }
-  }
-};
-
-const isCurrentQuestionLater = function (
-  currentQuestion: string,
-  lastQuestion: string
-): boolean {
-  if (lastQuestion === "playground") {
-    return true;
-  }
-  const currentlyInPlayground = currentQuestion.startsWith("playground/");
-  const lastlyInPlayground = lastQuestion.startsWith("playground/");
-  if (currentlyInPlayground && lastlyInPlayground) {
-    return (
-      parseInt(currentQuestion.split("/")[1]) >
-      parseInt(lastQuestion.split("/")[1])
-    );
-  } else if (currentlyInPlayground && !lastlyInPlayground) {
-    return false;
-  } else if (!currentlyInPlayground && lastlyInPlayground) {
-    return true;
-  } else {
-    try {
-      return parseInt(currentQuestion) > parseInt(lastQuestion);
-    } catch (error) {
-      return true;
-    }
-  }
-};
-
-const getApiPath = function (): string {
-  const lastQuestion = localStorage.getItem("lastQuestion") || "playground/1";
-  if (window.location.pathname === "/") {
-    window.location.pathname = `/${lastQuestion}`;
-  } else {
-    const currentQuestion = window.location.pathname
-      .split("/")
-      .splice(1)
-      .join("/");
-    if (isCurrentQuestionLater(currentQuestion, lastQuestion)) {
-      // update last question
-      localStorage.setItem("lastQuestion", currentQuestion);
-    }
-  }
-  return `/api${window.location.pathname}`;
+  canvas: [],
+  frame: 0,
+  error: "",
+  done: false,
 };
 
 function App() {
   const [grid, setGrid] = React.useState<string[][]>([]);
+  const [canvas, setCanvas] = React.useState<number[][]>([]);
   const [simulating, setSimulating] = React.useState<boolean>(false);
   const [result, setResult] = React.useState<Result>();
   const [location, setLocation] = React.useState<Point>({ x: 0, y: 0 });
@@ -537,6 +208,61 @@ function App() {
     },
   };
 
+  const input: Input = {
+    getFrame(): Promise<number[][]> {
+      if (WORLD.frame === 0) {
+        return fetch(getApiInputPath())
+          .then((res) => res.json())
+          .then((data) => {
+            WORLD.frame += 1;
+            return data.input as number[][];
+          });
+      } else {
+        return fetch(getApiInputPath(), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            index: WORLD.frame - 1,
+            data: canvasHash(WORLD.canvas),
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data["done"]) {
+              WORLD.done = true;
+              if (data["error"]) {
+                WORLD.error = data["error"];
+              }
+              return [];
+            } else {
+              WORLD.frame += 1;
+              return data.input as number[][];
+            }
+          });
+      }
+    },
+  };
+
+  const printer: Printer = {
+    print(location: Point, paint: number): void {
+      if (
+        WORLD.canvas &&
+        WORLD.canvas.length > 0 &&
+        location.x < WORLD.canvas.length &&
+        location.x >= 0 &&
+        location.y < WORLD.canvas[0].length &&
+        location.y >= 0
+      ) {
+        WORLD.canvas[location.x][location.y] = Math.max(
+          Math.min(paint, 255),
+          0
+        );
+      }
+    },
+  };
+
   const gameLoop = async function (
     userCode: (
       direction: Direction,
@@ -554,12 +280,31 @@ function App() {
       if (e instanceof SyntaxError || e instanceof ReferenceError) {
         setResult({ result: `Code error - ${e.message}`, won: false });
       } else {
+        console.log({ e });
         setResult({ result: `Code error`, won: false });
       }
     }
-    simulateWorld();
+    simulateWorld(WORLD);
     setPedestrians(WORLD.pedestrians);
     setLocation({ x: WORLD.location.x, y: WORLD.location.y });
+  };
+
+  const gameLoopCanvas = async function (
+    userCode: (input: Input, printer: Printer, data: DataStore) => void
+  ) {
+    try {
+      await userCode(input, printer, dataStore); // run user code
+    } catch (e) {
+      setSimulating(false);
+      if (e instanceof SyntaxError || e instanceof ReferenceError) {
+        setResult({ result: `Code error - ${e.message}`, won: false });
+      } else {
+        console.log({ e });
+        setResult({ result: `Code error`, won: false });
+      }
+    }
+    simulateWorld(WORLD);
+    setCanvas(JSON.parse(JSON.stringify(WORLD.canvas)));
   };
 
   React.useEffect(() => {
@@ -567,37 +312,40 @@ function App() {
       return;
     }
     // check if the game has ended
-    const { ended, result, won } = checkEndCondition(location, grid);
+    const { ended, result, won } = checkEndCondition(WORLD, location, grid);
     if (!ended) {
-      const userFunc: (
-        direction: Direction,
-        gps: GPS,
-        sensor: Sensor,
-        data: DataStore
-      ) => void = eval(userCode);
+      const userFunc = eval(userCode);
       // if not continue execution
-      setTimeout(() => {
-        gameLoop(userFunc);
-      }, 100);
+      if (WORLD.metadata.type === "canvas") {
+        requestAnimationFrame(() => {
+          gameLoopCanvas(userFunc);
+        });
+      } else {
+        setTimeout(() => {
+          gameLoop(userFunc);
+        }, 100);
+      }
     } else {
+      if (WORLD.metadata.type === "canvas") {
+        setCanvas(JSON.parse(JSON.stringify(WORLD.canvas)));
+      }
       // end the game
       setSimulating(false);
       setResult({ result, won });
     }
-  }, [location]);
+  }, [location, canvas]);
 
   React.useEffect(() => {
     if (!userCode || !simulating) {
       return;
     }
     try {
-      const userFunc: (
-        direction: Direction,
-        gps: GPS,
-        sensor: Sensor,
-        data: DataStore
-      ) => void = eval(userCode);
-      gameLoop(userFunc);
+      const userFunc = eval(userCode);
+      if (WORLD.metadata.type === "canvas") {
+        gameLoopCanvas(userFunc);
+      } else {
+        gameLoop(userFunc);
+      }
     } catch (e) {
       setSimulating(false);
       if (e instanceof SyntaxError || e instanceof ReferenceError) {
@@ -658,6 +406,24 @@ function App() {
       }
     }
     WORLD.grid = grid;
+    WORLD.canvas = [];
+    WORLD.frame = 0;
+    WORLD.error = "";
+    WORLD.done = false;
+    let canvas = [];
+    for (let i = 0; i < 100; i++) {
+      let row: number[] = [];
+      for (let j = 0; j < 100; j++) {
+        if (i === 0 || j === 0 || i === 99 || j === 99) {
+          row.push(0);
+        } else {
+          row.push(255);
+        }
+      }
+      canvas.push(row);
+    }
+    WORLD.canvas = canvas;
+    setCanvas(canvas);
     setGrid(grid);
     setPedestrians(WORLD.pedestrians);
     setSimulating(false);
@@ -670,7 +436,10 @@ function App() {
 
   return (
     <div className="hot-rod-app">
-      <Simulation pedestrians={pedestrians} location={location} grid={grid} />
+      {WORLD.metadata.type !== "canvas" && (
+        <Simulation pedestrians={pedestrians} location={location} grid={grid} />
+      )}
+      {WORLD.metadata.type === "canvas" && <CanvasSimulation canvas={canvas} />}
       <CodeEditor
         defaultCode={defaultCode}
         reset={reset}

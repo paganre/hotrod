@@ -58,6 +58,7 @@ exports.METADATA = {
     Sensor: {
         isTargetClose: 10,
     },
+    nextLevel: "/5",
 };
 exports.DEFAULT_CODE = `/**
 * Let's stress test your algorithm to the previous question.

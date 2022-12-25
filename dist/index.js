@@ -7,6 +7,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const cors_1 = __importDefault(require("cors"));
+const blueimp_md5_1 = __importDefault(require("blueimp-md5"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
@@ -35,6 +36,53 @@ app.get("/api/:id", (req, res) => {
             code: lvl.DEFAULT_CODE,
             metadata: lvl.METADATA ? lvl.METADATA : {},
         });
+    }
+    catch (ex) {
+        res.send(404);
+    }
+});
+app.get("/api/:id/input", (req, res) => {
+    const { id } = req.params;
+    try {
+        const lvl = require(`./levels/${id}`);
+        if (lvl.INPUTS && lvl.INPUTS.length > 0) {
+            res.json({ input: lvl.INPUTS[0] });
+        }
+        else {
+            res.send(404);
+        }
+    }
+    catch (ex) {
+        res.send(404);
+    }
+});
+app.post("/api/:id/input", (req, res) => {
+    const { id } = req.params;
+    const { data, index } = req.body;
+    try {
+        const lvl = require(`./levels/${id}`);
+        if (lvl.OUTPUTS && lvl.OUTPUTS.length >= index) {
+            const output = lvl.OUTPUTS[index];
+            // check correctness
+            if ((0, blueimp_md5_1.default)(output.join(",")) === data) {
+                // correct!
+                if (lvl.INPUTS.length > index + 1) {
+                    console.log({ index, yo: lvl.INPUTS.length });
+                    // return the next one
+                    res.json({ input: lvl.INPUTS[index + 1] });
+                }
+                else {
+                    // ended
+                    res.json({ done: true });
+                }
+            }
+            else {
+                res.json({ error: `Incorrect response for input frame ${index + 1}` });
+            }
+        }
+        else {
+            res.send(404);
+        }
     }
     catch (ex) {
         res.send(404);
