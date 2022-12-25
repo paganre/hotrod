@@ -1,8 +1,14 @@
-import Editor from "@monaco-editor/react";
+import Editor, { loader } from "@monaco-editor/react";
 import React from "react";
 import { useState } from "react";
 import { getApiPath } from "./helpers/apiHelpers";
 import { Result } from "./types";
+
+loader.config({
+  paths: {
+    vs: "/vs",
+  },
+});
 
 export interface CodeEditorProps {
   defaultCode: string;

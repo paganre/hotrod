@@ -65,7 +65,6 @@ app.post("/api/:id/input", (req, res) => {
       if (md5(output.join(",")) === data) {
         // correct!
         if (lvl.INPUTS.length > index + 1) {
-          console.log({ index, yo: lvl.INPUTS.length });
           // return the next one
           res.json({ input: lvl.INPUTS[index + 1] });
         } else {

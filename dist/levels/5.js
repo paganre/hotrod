@@ -23,6 +23,10 @@ for (let i = 0; i < 10; i++) {
     }
     exports.INPUTS.push(input);
 }
+/*import * as fs from "fs";
+const out = fs.readFileSync("carmack.jpg", "utf8");
+INPUTS.push(out)
+*/
 exports.OUTPUTS = [];
 for (let k = 0; k < exports.INPUTS.length; k++) {
     const output = [];

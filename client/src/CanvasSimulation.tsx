@@ -9,6 +9,7 @@ function isHTMLCanvasElement(el: HTMLElement): el is HTMLCanvasElement {
 }
 
 function CanvasSimulation(props: CanvasSimulationProps) {
+  const SCALE = 12;
   useEffect(() => {
     var canvas = document.getElementById("hot-rod-canvas");
     if (canvas && isHTMLCanvasElement(canvas)) {
@@ -16,10 +17,10 @@ function CanvasSimulation(props: CanvasSimulationProps) {
       if (ctx) {
         const dpi = window.devicePixelRatio;
         ctx.scale(dpi, dpi);
-        canvas.width = 6 * props.canvas.length;
-        canvas.height = 6 * props.canvas.length;
-        canvas.style.width = `${(6 * props.canvas.length) / 2}px`;
-        canvas.style.height = `${(6 * props.canvas.length) / 2}px`;
+        canvas.width = SCALE * props.canvas.length;
+        canvas.height = SCALE * props.canvas.length;
+        canvas.style.width = `${(SCALE * props.canvas.length) / 2}px`;
+        canvas.style.height = `${(SCALE * props.canvas.length) / 2}px`;
       }
     }
   });
@@ -32,7 +33,7 @@ function CanvasSimulation(props: CanvasSimulationProps) {
         for (let i = 0; i < props.canvas.length; i++) {
           for (let j = 0; j < props.canvas[0].length; j++) {
             ctx.fillStyle = `rgb(${props.canvas[i][j]},${props.canvas[i][j]},${props.canvas[i][j]})`;
-            ctx.fillRect(i * 6, j * 6, 6, 6);
+            ctx.fillRect(i * SCALE, j * SCALE, SCALE, SCALE);
           }
         }
       }

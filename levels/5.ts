@@ -22,6 +22,11 @@ for (let i = 0; i < 10; i++) {
   INPUTS.push(input);
 }
 
+/*import * as fs from "fs";
+const out = fs.readFileSync("carmack.jpg", "utf8");
+INPUTS.push(out)
+*/
+
 export const OUTPUTS: number[][][] = [];
 for (let k = 0; k < INPUTS.length; k++) {
   const output: number[][] = [];
