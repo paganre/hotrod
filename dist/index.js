@@ -8,11 +8,19 @@ const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const cors_1 = __importDefault(require("cors"));
 const blueimp_md5_1 = __importDefault(require("blueimp-md5"));
+const world_1 = require("./world");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use((0, cors_1.default)());
 app.use(express_1.default.static(path_1.default.resolve(__dirname, "../client/build")));
+app.get("/worldData", (req, res) => {
+    const { levels, metadata } = (0, world_1.getWorld)();
+    res.json({
+        levels,
+        metadata,
+    });
+});
 app.get("/api/playground/:id", (req, res) => {
     const { id } = req.params;
     try {

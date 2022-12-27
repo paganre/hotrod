@@ -130,3 +130,58 @@
   position: absolute;
   z-index: -1;
 }
+
+.level-container {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid gray;
+  text-align: center;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.level-container-clickable {
+  cursor: pointer;
+}
+.level-container-clickable:hover {
+  background-color: black !important;
+  color: white !important;
+}
+
+.world-container {
+  position: relative;
+}
+
+.hot-rod-world {
+  position: relative;
+  width: calc(75% - 40px);
+  height: calc(100% - 40px);
+  padding: 20px;
+}
+
+.hot-rod-world-info {
+  width: calc(25% - 40px);
+  height: calc(100% - 40px);
+  padding: 20px;
+  background-color: black;
+  color: white;
+}
+
+.hot-rod-world-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.hot-rod-world-info p {
+  font-size: 13px;
+  color: #ccc;
+  line-height: 1.5em;
+}

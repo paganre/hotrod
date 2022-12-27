@@ -1,3 +1,5 @@
+import { CSSProperties } from "react";
+
 export type Point = {
   x: number;
   y: number;
@@ -90,4 +92,18 @@ export type World = {
   frame: number;
   error: string;
   done: boolean;
+};
+
+export type Level = {
+  location: Point;
+  title?: string;
+  style?: CSSProperties;
+  target: string;
+  metadataKey?: string;
+  flickerIndex?: number;
+  flickeringChars?: string[];
+};
+
+export type LevelMetadata = {
+  description: string; // markdown text
 };

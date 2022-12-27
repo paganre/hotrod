@@ -5,6 +5,7 @@ import CanvasSimulation from "./CanvasSimulation";
 import CodeEditor from "./CodeEditor";
 import { canvasHash, getApiInputPath, getApiPath } from "./helpers/apiHelpers";
 import { manhattanDistance } from "./helpers/pointHelpers";
+import { getRouteType, reroute, RouteType } from "./helpers/routeHelpers";
 import { checkEndCondition, simulateWorld } from "./helpers/simulationHelpers";
 import Simulation from "./Simulation";
 import {
@@ -21,6 +22,7 @@ import {
   World,
   WorldMetadata,
 } from "./types";
+import WorldApp from "./WorldApp";
 
 const WORLD: World = {
   metadata: {} as WorldMetadata,
@@ -50,24 +52,38 @@ function App() {
   const [result, setResult] = React.useState<Result>();
   const [location, setLocation] = React.useState<Point>({ x: 0, y: 0 });
   const [target, setTarget] = React.useState<Point>({ x: 0, y: 0 });
+  const [route, setRoute] = React.useState<RouteType>();
   const [userCode, setUserCode] = React.useState("");
   const [defaultCode, setDefaultCode] = React.useState("");
   const [pedestrians, setPedestrians] = React.useState<Pedestrian[]>([]);
 
   React.useEffect(() => {
-    fetch(getApiPath())
-      .then((res) => res.json())
-      .then((data) => {
-        WORLD.metadata = data.metadata;
-        if (WORLD.metadata.rateLimitOverrides?.direction !== undefined) {
-          WORLD.rateLimits.direction =
-            WORLD.metadata.rateLimitOverrides.direction;
-        }
-        WORLD.original_grid = JSON.parse(JSON.stringify(data.grid));
-        setDefaultCode(data.code);
-        resetWithGrid(JSON.parse(JSON.stringify(WORLD.original_grid)));
-      });
+    const rerouted = reroute();
+    if (!rerouted) {
+      const routeType = getRouteType();
+      setRoute(routeType);
+    }
   }, []);
+
+  React.useEffect(() => {
+    if (route === "level") {
+      localStorage.setItem("lastRoute", "level");
+      fetch(getApiPath())
+        .then((res) => res.json())
+        .then((data) => {
+          WORLD.metadata = data.metadata;
+          if (WORLD.metadata.rateLimitOverrides?.direction !== undefined) {
+            WORLD.rateLimits.direction =
+              WORLD.metadata.rateLimitOverrides.direction;
+          }
+          WORLD.original_grid = JSON.parse(JSON.stringify(data.grid));
+          setDefaultCode(data.code);
+          resetWithGrid(JSON.parse(JSON.stringify(WORLD.original_grid)));
+        });
+    } else if (route === "world") {
+      localStorage.setItem("lastRoute", "world");
+    }
+  }, [route]);
 
   const gps: GPS = {
     getLocation: function () {
@@ -436,20 +452,25 @@ function App() {
 
   return (
     <div className="hot-rod-app">
-      {WORLD.metadata.type !== "canvas" && (
+      {route === "level" && WORLD.metadata.type !== "canvas" && (
         <Simulation pedestrians={pedestrians} location={location} grid={grid} />
       )}
-      {WORLD.metadata.type === "canvas" && <CanvasSimulation canvas={canvas} />}
-      <CodeEditor
-        defaultCode={defaultCode}
-        reset={reset}
-        runCode={startSimulation}
-        simulating={simulating}
-        result={result}
-        nextLevel={() => {
-          window.location.pathname = WORLD.metadata.nextLevel;
-        }}
-      />
+      {route === "level" && WORLD.metadata.type === "canvas" && (
+        <CanvasSimulation canvas={canvas} />
+      )}
+      {route === "level" && (
+        <CodeEditor
+          defaultCode={defaultCode}
+          reset={reset}
+          runCode={startSimulation}
+          simulating={simulating}
+          result={result}
+          nextLevel={() => {
+            window.location.pathname = WORLD.metadata.nextLevel;
+          }}
+        />
+      )}
+      {route === "world" && <WorldApp />}
     </div>
   );
 }
