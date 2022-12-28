@@ -264,6 +264,8 @@ export async function getWorld(sessionId: string): Promise<{
     ...playgroundLevels,
     ...firstContainer,
     ...firstLevels,
+    ...sensorContainer,
+    ...sensorLevels,
   ];
 
   levels = levels.concat(

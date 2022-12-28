@@ -196,6 +196,8 @@ function getWorld(sessionId) {
             ...playgroundLevels,
             ...firstContainer,
             ...firstLevels,
+            ...sensorContainer,
+            ...sensorLevels,
         ];
         levels = levels.concat(getFillerLevels(levels, { color: "rgb(50,50,50)", fontSize: "14px" }));
         levels = levels.concat(sensorContainer);
