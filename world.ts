@@ -208,7 +208,7 @@ export async function getWorld(sessionId: string): Promise<{
       fontWeight: "bold",
       background: "rgba(0,0,0,0.05)",
     });
-    let firstLevelsDone: boolean = false;
+    let firstLevelsDone: boolean = true;
     firstLevels = [1, 2, 3, 4].map((level, index) => {
       const done: boolean | undefined = worldData?.done.includes(
         getLevelKey("1", level.toString())
