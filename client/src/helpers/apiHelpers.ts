@@ -25,3 +25,7 @@ export const getApiInputPath = function (): string {
 export const canvasHash = function (canvas: number[][]): string {
   return md5(canvas.join(","));
 };
+
+export const getApiDonePath = function (): string {
+  return `/api${window.location.pathname}/done`;
+};

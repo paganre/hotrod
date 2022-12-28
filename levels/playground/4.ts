@@ -91,7 +91,7 @@ function gameLoop(direction: Direction, gps: GPS, sensor: Sensor, data: DataStor
 `;
 
 export const METADATA = {
-  nextLevel: "/1",
+  nextLevel: "/world",
   pedMoves: {
     "1": ["right", "right", "right", "right", "left", "left", "left", "left"],
     "2": ["left", "left", "right", "right"],

@@ -12,12 +12,6 @@ export const reroute = function (): boolean {
   if (window.location.pathname !== "/") {
     return false;
   }
-  const lastRoute = (localStorage.getItem("lastRoute") || "level") as RouteType;
-  if (lastRoute === "level") {
-    const lastQuestion = localStorage.getItem("lastQuestion") || "playground/1";
-    window.location.pathname = `/${lastQuestion}`;
-  } else if (lastRoute === "world") {
-    window.location.pathname = `/world`;
-  }
+  window.location.pathname = `/world`;
   return true;
 };

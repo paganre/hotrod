@@ -3,7 +3,12 @@ import ts from "typescript";
 import "./App.css";
 import CanvasSimulation from "./CanvasSimulation";
 import CodeEditor from "./CodeEditor";
-import { canvasHash, getApiInputPath, getApiPath } from "./helpers/apiHelpers";
+import {
+  canvasHash,
+  getApiDonePath,
+  getApiInputPath,
+  getApiPath,
+} from "./helpers/apiHelpers";
 import { manhattanDistance } from "./helpers/pointHelpers";
 import { getRouteType, reroute, RouteType } from "./helpers/routeHelpers";
 import { checkEndCondition, simulateWorld } from "./helpers/simulationHelpers";
@@ -329,6 +334,16 @@ function App() {
     }
     // check if the game has ended
     const { ended, result, won } = checkEndCondition(WORLD, location, grid);
+    if (won) {
+      // send done data to server
+      fetch(getApiDonePath(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userCode }),
+      }).then((res) => res.json());
+    }
     if (!ended) {
       const userFunc = eval(userCode);
       // if not continue execution

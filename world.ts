@@ -1,3 +1,5 @@
+import { getBlob, getLevelKey, getWorldKey } from "./redis";
+
 type Point = {
   x: number;
   y: number;
@@ -148,92 +150,124 @@ function getFlickeringBlock(
   };
 }
 
-export function getWorld(): {
+export type WorldState = {
+  sessionId: string;
+  done: string[];
+  code: { [key: string]: string };
+};
+
+export async function getWorld(sessionId: string): Promise<{
   levels: Level[];
   metadata: Record<string, LevelMetadata>;
-} {
+}> {
+  let worldData = await getBlob<Omit<WorldState, "code">>(
+    getWorldKey(sessionId)
+  );
+  if (worldData === undefined) {
+    worldData = {
+      sessionId,
+      done: [],
+    };
+  }
+
   const playgroundContainer = createRect({ x: 5, y: 6 }, { x: 7, y: 11 }, "P", {
     background: "rgba(0,0,0,0.05)",
     fontWeight: "bold",
   });
+  let playgroundDone: boolean = true;
   const playgroundLevels = [1, 2, 3, 4].map((level, index) => {
     const location: Point = { x: 6, y: 7 + index };
+    const done: boolean | undefined = worldData?.done.includes(
+      getLevelKey("playground", level.toString())
+    );
+    if (!done) {
+      playgroundDone = false;
+    }
     return {
       location,
-      title: level.toString(),
+      title: done ? "✓" : level.toString(),
       target: `/playground/${level}`,
       style: {
         fontWeight: "bold",
-        background: "white",
+        background: done ? "green" : "white",
+        color: done ? "white" : "black",
+        borderColor: done ? "darkgreen" : "gray",
+        zIndex: done ? "1" : "0",
       },
       metadataKey: `P${level}`,
     } as Level;
   });
 
-  const spiesFirstContainer = createRect(
-    { x: 6, y: 13 },
-    { x: 9, y: 16 },
-    "1",
-    {
+  let firstContainer: Level[] = [];
+  let firstLevels: Level[] = [];
+  let sensorContainer: Level[] = [];
+  let sensorLevels: Level[] = [];
+
+  if (playgroundDone) {
+    firstContainer = createRect({ x: 6, y: 13 }, { x: 9, y: 16 }, "1", {
       fontWeight: "bold",
       background: "rgba(0,0,0,0.05)",
-    }
-  );
-  const spiesFirstLevels = [1, 2, 3, 4].map((level, index) => {
-    const location: Point = {
-      x: 7 + Math.floor(index / 2),
-      y: 14 + (index % 2),
-    };
-    return {
-      location,
-      title: level.toString(),
-      target: `/${level}`,
-      style: {
-        fontWeight: "bold",
-        background: "white",
-      },
-    } as Level;
-  });
+    });
+    let firstLevelsDone: boolean = false;
+    firstLevels = [1, 2, 3, 4].map((level, index) => {
+      const done: boolean | undefined = worldData?.done.includes(
+        getLevelKey("1", level.toString())
+      );
+      if (!done) {
+        firstLevelsDone = false;
+      }
+      const location: Point = {
+        x: 7 + Math.floor(index / 2),
+        y: 14 + (index % 2),
+      };
+      return {
+        location,
+        title: level.toString(),
+        target: `/${level}`,
+        style: {
+          fontWeight: "bold",
+          background: "white",
+        },
+      } as Level;
+    });
 
-  const sensorUpgradesContainer = createRect(
-    { x: 20, y: 9 },
-    { x: 21, y: 11 },
-    "S",
-    {
-      fontWeight: "bold",
-      background: "rgba(0,0,0,0.05)",
-    }
-  );
-
-  const sensorUpgradesLevels = [1, 2, 3].map((level, index) => {
-    const location: Point = {
-      x: 20,
-      y: 9 + index,
-    };
-    return {
-      location,
-      title: ["📡", "📟", "🎛️"][index],
-      target: `/sensor/${level}`,
-      style: {
+    if (firstLevelsDone) {
+      sensorContainer = createRect({ x: 20, y: 9 }, { x: 21, y: 11 }, "S", {
         fontWeight: "bold",
-        background: "white",
-        border: "1px solid gray",
-      },
-    } as Level;
-  });
+        background: "rgba(0,0,0,0.05)",
+      });
+
+      sensorLevels = [1, 2, 3].map((level, index) => {
+        const location: Point = {
+          x: 20,
+          y: 9 + index,
+        };
+        return {
+          location,
+          title: ["📡", "📟", "🎛️"][index],
+          target: `/sensor/${level}`,
+          style: {
+            fontWeight: "bold",
+            background: "white",
+            border: "1px solid gray",
+          },
+        } as Level;
+      });
+    }
+  }
 
   let levels = [
     ...playgroundContainer,
     ...playgroundLevels,
-    ...spiesFirstContainer,
-    ...spiesFirstLevels,
+    ...firstContainer,
+    ...firstLevels,
   ];
 
   levels = levels.concat(
     getFillerLevels(levels, { color: "rgb(50,50,50)", fontSize: "14px" })
   );
-  levels = levels.concat(sensorUpgradesContainer);
-  levels = levels.concat(sensorUpgradesLevels);
+  levels = levels.concat(sensorContainer);
+  levels = levels.concat(sensorLevels);
   levels = levels.concat(
     getFillerLevels(levels, { color: "rgb(150,150,150)", fontSize: "12px" })
   );
@@ -280,7 +314,7 @@ Now use more APIs including \`Sensor\`, \`GPS\` and \`DataStore\` to come up wit
 ### P4. Pedestrians
       
 Introducing \`Pedestrian\`s and how not to run over them using your \`Sensor\`.
-`,
+  `,
     },
     1: {
       description: `
