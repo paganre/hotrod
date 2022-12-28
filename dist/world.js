@@ -157,11 +157,14 @@ function getWorld(sessionId) {
                 };
                 return {
                     location,
-                    title: level.toString(),
+                    title: done ? "✓" : level.toString(),
                     target: `/1/${level}`,
                     style: {
                         fontWeight: "bold",
-                        background: "white",
+                        background: done ? "green" : "white",
+                        color: done ? "white" : "black",
+                        borderColor: done ? "darkgreen" : "gray",
+                        zIndex: done ? "1" : "0",
                     },
                 };
             });
