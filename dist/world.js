@@ -158,7 +158,7 @@ function getWorld(sessionId) {
                 return {
                     location,
                     title: level.toString(),
-                    target: `/${level}`,
+                    target: `/1/${level}`,
                     style: {
                         fontWeight: "bold",
                         background: "white",
@@ -178,7 +178,7 @@ function getWorld(sessionId) {
                     return {
                         location,
                         title: ["📡", "📟", "🎛️"][index],
-                        target: `/sensor/${level}`,
+                        target: `/S/${level}`,
                         style: {
                             fontWeight: "bold",
                             background: "white",
