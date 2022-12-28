@@ -223,7 +223,7 @@ export async function getWorld(sessionId: string): Promise<{
       return {
         location,
         title: level.toString(),
-        target: `/${level}`,
+        target: `/1/${level}`,
         style: {
           fontWeight: "bold",
           background: "white",
@@ -245,7 +245,7 @@ export async function getWorld(sessionId: string): Promise<{
         return {
           location,
           title: ["📡", "📟", "🎛️"][index],
-          target: `/sensor/${level}`,
+          target: `/S/${level}`,
           style: {
             fontWeight: "bold",
             background: "white",
