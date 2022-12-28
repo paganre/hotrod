@@ -145,7 +145,7 @@ function getWorld(sessionId) {
                 fontWeight: "bold",
                 background: "rgba(0,0,0,0.05)",
             });
-            let firstLevelsDone = false;
+            let firstLevelsDone = true;
             firstLevels = [1, 2, 3, 4].map((level, index) => {
                 const done = worldData === null || worldData === void 0 ? void 0 : worldData.done.includes((0, redis_1.getLevelKey)("1", level.toString()));
                 if (!done) {
