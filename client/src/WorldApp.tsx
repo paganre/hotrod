@@ -37,12 +37,18 @@ function LevelContainer(props: LevelProps) {
     left: props.level.location.y * 21,
     top: props.level.location.x * 21,
   };
-  let overrideStyles: Level["style"] = {};
-  if (props.hovering && props.hovering === props.level.metadataKey) {
-    overrideStyles["background"] = "rgba(255,255,0,0.15)";
-    overrideStyles["border"] = "1px solid #ddd";
-    overrideStyles["color"] = "black";
-  }
+  const overrideStyles: Level["style"] = {};
+  useEffect(() => {
+    if (props.hovering && props.hovering === props.level.metadataKey) {
+      overrideStyles["background"] = "rgba(255,255,0,0.15)";
+      overrideStyles["borderColor"] = "#ddd";
+      overrideStyles["color"] = "black";
+    } else {
+      delete overrideStyles["background"];
+      delete overrideStyles["borderColor"];
+      delete overrideStyles["color"];
+    }
+  }, [props.hovering, props.level.metadataKey]);
   return (
     <div
       onMouseEnter={() => props.handleMouseEnter(props.level.metadataKey)}
