@@ -40,13 +40,17 @@ function LevelContainer(props: LevelProps) {
   };
   useEffect(() => {
     const newOverrideStyles: Level["style"] = {};
-    if (props.hovering && props.hovering === props.level.metadataKey) {
+    if (
+      props.hovering &&
+      props.hovering === props.level.metadataKey &&
+      !props.level.target
+    ) {
       newOverrideStyles["background"] = "rgba(255,255,0,0.15)";
       newOverrideStyles["borderColor"] = "#ddd";
       newOverrideStyles["color"] = "black";
     }
     setOverrideStyles(newOverrideStyles);
-  }, [props.hovering, props.level.metadataKey]);
+  }, [props.hovering]);
   return (
     <div
       onMouseEnter={() => props.handleMouseEnter(props.level.metadataKey)}
