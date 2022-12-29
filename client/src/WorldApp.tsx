@@ -48,7 +48,7 @@ function LevelContainer(props: LevelProps) {
       delete overrideStyles["borderColor"];
       delete overrideStyles["color"];
     }
-  }, [props.hovering, props.level.metadataKey]);
+  }, [props.hovering]);
   return (
     <div
       onMouseEnter={() => props.handleMouseEnter(props.level.metadataKey)}
