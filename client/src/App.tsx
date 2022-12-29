@@ -258,6 +258,7 @@ function App() {
               }
               return [];
             } else if (data["error"]) {
+              WORLD.done = true;
               WORLD.error = data["error"];
               return [];
             } else {
