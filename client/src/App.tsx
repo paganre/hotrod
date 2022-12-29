@@ -342,7 +342,7 @@ function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ userCode }),
-      }).then((res) => res.json());
+      });
     }
     if (!ended) {
       const userFunc = eval(userCode);

@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getWorld = void 0;
+exports.getWorld = exports.markLevelDone = void 0;
 const redis_1 = require("./redis");
 function createRect(topLeft, bottomRight, title, defaultStyle) {
     const levels = [];
@@ -102,6 +102,30 @@ function getFlickeringBlock(location, flickeringChars, flickerIndex, style) {
         flickeringChars,
     };
 }
+function markLevelDone(sessionId, namespace, id, userCode) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const key = (0, redis_1.getWorldKey)(sessionId);
+        const levelKey = (0, redis_1.getLevelKey)(namespace, id);
+        let worldState = yield (0, redis_1.getBlob)(key);
+        if (worldState === undefined) {
+            worldState = {
+                sessionId: sessionId,
+                done: [levelKey],
+                code: {
+                    levelKey: userCode,
+                },
+            };
+        }
+        else {
+            if (!worldState.done.includes(levelKey)) {
+                worldState.done.push(levelKey);
+            }
+            worldState.code[levelKey] = userCode;
+        }
+        yield (0, redis_1.setBlob)(key, worldState);
+    });
+}
+exports.markLevelDone = markLevelDone;
 function getWorld(sessionId) {
     return __awaiter(this, void 0, void 0, function* () {
         let worldData = yield (0, redis_1.getBlob)((0, redis_1.getWorldKey)(sessionId));
@@ -178,14 +202,17 @@ function getWorld(sessionId) {
                         x: 20,
                         y: 9 + index,
                     };
+                    const done = worldData === null || worldData === void 0 ? void 0 : worldData.done.includes((0, redis_1.getLevelKey)("S", level.toString()));
                     return {
                         location,
-                        title: ["📡", "📟", "🎛️"][index],
+                        title: done ? "✓" : ["📡", "📟", "🎛️"][index],
                         target: `/S/${level}`,
                         style: {
                             fontWeight: "bold",
-                            background: "white",
-                            border: "1px solid gray",
+                            background: done ? "green" : "white",
+                            color: done ? "white" : "black",
+                            borderColor: done ? "darkgreen" : "gray",
+                            zIndex: done ? "1" : "0",
                         },
                     };
                 });

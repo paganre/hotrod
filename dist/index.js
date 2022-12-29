@@ -19,7 +19,6 @@ const cors_1 = __importDefault(require("cors"));
 const blueimp_md5_1 = __importDefault(require("blueimp-md5"));
 const world_1 = require("./world");
 const express_session_1 = __importDefault(require("express-session"));
-const redis_1 = require("./redis");
 let RedisStore = require("connect-redis")(express_session_1.default);
 const Redis = require("ioredis");
 let redisClient = new Redis();
@@ -63,38 +62,24 @@ app.post("/api/:namespace/:id/done", (req, res) => __awaiter(void 0, void 0, voi
     console.log(userCode);
     try {
         const lvl = require(`./levels/${namespace}/${id}`);
-        if (lvl) {
-            const key = (0, redis_1.getWorldKey)(req.session.id);
-            const levelKey = (0, redis_1.getLevelKey)(namespace, id);
-            let worldState = yield (0, redis_1.getBlob)(key);
-            if (worldState === undefined) {
-                worldState = {
-                    sessionId: req.session.id,
-                    done: [levelKey],
-                    code: {
-                        levelKey: userCode,
-                    },
-                };
-            }
-            else {
-                if (!worldState.done.includes(levelKey)) {
-                    worldState.done.push(levelKey);
-                }
-                worldState.code[levelKey] = userCode;
-            }
-            yield (0, redis_1.setBlob)(key, worldState);
+        if (lvl && !(lvl.METADATA && lvl.METADATA.type === "canvas")) {
+            yield (0, world_1.markLevelDone)(req.session.id, namespace, id, userCode);
+        }
+        else {
+            res.send(201);
         }
     }
     catch (ex) {
         res.send(404);
     }
 }));
-app.get("/api/:namespace/:id/input", (req, res) => {
+app.get("/api/:namespace/:id/input", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { namespace, id } = req.params;
     try {
         const lvl = require(`./levels/${namespace}/${id}`);
-        if (lvl.INPUTS && lvl.INPUTS.length > 0) {
-            res.json({ input: lvl.INPUTS[0] });
+        const INPUTS = yield lvl.getInputs();
+        if (INPUTS.length > 0) {
+            res.json({ input: INPUTS[0] });
         }
         else {
             res.send(404);
@@ -103,23 +88,26 @@ app.get("/api/:namespace/:id/input", (req, res) => {
     catch (ex) {
         res.send(404);
     }
-});
-app.post("/api/:namespace/:id/input", (req, res) => {
+}));
+app.post("/api/:namespace/:id/input", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { namespace, id } = req.params;
     const { data, index } = req.body;
     try {
         const lvl = require(`./levels/${namespace}/${id}`);
-        if (lvl.OUTPUTS && lvl.OUTPUTS.length >= index) {
-            const output = lvl.OUTPUTS[index];
+        const INPUTS = yield lvl.getInputs();
+        const OUTPUTS = yield lvl.getOutputs();
+        if (OUTPUTS && OUTPUTS.length >= index) {
+            const output = OUTPUTS[index];
             // check correctness
             if ((0, blueimp_md5_1.default)(output.join(",")) === data) {
                 // correct!
-                if (lvl.INPUTS.length > index + 1) {
+                if (INPUTS.length > index + 1) {
                     // return the next one
-                    res.json({ input: lvl.INPUTS[index + 1] });
+                    res.json({ input: INPUTS[index + 1] });
                 }
                 else {
                     // ended
+                    yield (0, world_1.markLevelDone)(req.session.id, namespace, id, "");
                     res.json({ done: true });
                 }
             }
@@ -134,7 +122,7 @@ app.post("/api/:namespace/:id/input", (req, res) => {
     catch (ex) {
         res.send(404);
     }
-});
+}));
 const port = process.env.PORT || 8000;
 app.listen(port, () => {
     console.log(`listening on port ${port}`);

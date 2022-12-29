@@ -3,9 +3,8 @@ import express, { Express } from "express";
 import path from "path";
 import cors from "cors";
 import md5 from "blueimp-md5";
-import { getWorld, WorldState } from "./world";
+import { getWorld, markLevelDone } from "./world";
 import session from "express-session";
-import { getBlob, getLevelKey, getWorldKey, setBlob } from "./redis";
 let RedisStore = require("connect-redis")(session);
 const Redis = require("ioredis");
 let redisClient = new Redis();
@@ -57,37 +56,23 @@ app.post("/api/:namespace/:id/done", async (req, res) => {
   console.log(userCode);
   try {
     const lvl = require(`./levels/${namespace}/${id}`);
-    if (lvl) {
-      const key = getWorldKey(req.session.id);
-      const levelKey = getLevelKey(namespace, id);
-      let worldState = await getBlob<WorldState>(key);
-      if (worldState === undefined) {
-        worldState = {
-          sessionId: req.session.id,
-          done: [levelKey],
-          code: {
-            levelKey: userCode as string,
-          },
-        };
-      } else {
-        if (!worldState.done.includes(levelKey)) {
-          worldState.done.push(levelKey);
-        }
-        worldState.code[levelKey] = userCode;
-      }
-      await setBlob<WorldState>(key, worldState);
+    if (lvl && !(lvl.METADATA && lvl.METADATA.type === "canvas")) {
+      await markLevelDone(req.session.id, namespace, id, userCode);
+    } else {
+      res.send(201);
     }
   } catch (ex) {
     res.send(404);
   }
 });
 
-app.get("/api/:namespace/:id/input", (req, res) => {
+app.get("/api/:namespace/:id/input", async (req, res) => {
   const { namespace, id } = req.params;
   try {
     const lvl = require(`./levels/${namespace}/${id}`);
-    if (lvl.INPUTS && lvl.INPUTS.length > 0) {
-      res.json({ input: lvl.INPUTS[0] });
+    const INPUTS = await lvl.getInputs();
+    if (INPUTS.length > 0) {
+      res.json({ input: INPUTS[0] });
     } else {
       res.send(404);
     }
@@ -96,21 +81,24 @@ app.get("/api/:namespace/:id/input", (req, res) => {
   }
 });
 
-app.post("/api/:namespace/:id/input", (req, res) => {
+app.post("/api/:namespace/:id/input", async (req, res) => {
   const { namespace, id } = req.params;
   const { data, index } = req.body;
   try {
     const lvl = require(`./levels/${namespace}/${id}`);
-    if (lvl.OUTPUTS && lvl.OUTPUTS.length >= index) {
-      const output = lvl.OUTPUTS[index];
+    const INPUTS = await lvl.getInputs();
+    const OUTPUTS = await lvl.getOutputs();
+    if (OUTPUTS && OUTPUTS.length >= index) {
+      const output = OUTPUTS[index];
       // check correctness
       if (md5(output.join(",")) === data) {
         // correct!
-        if (lvl.INPUTS.length > index + 1) {
+        if (INPUTS.length > index + 1) {
           // return the next one
-          res.json({ input: lvl.INPUTS[index + 1] });
+          res.json({ input: INPUTS[index + 1] });
         } else {
           // ended
+          await markLevelDone(req.session.id, namespace, id, "");
           res.json({ done: true });
         }
       } else {

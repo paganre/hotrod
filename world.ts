@@ -1,4 +1,4 @@
-import { getBlob, getLevelKey, getWorldKey } from "./redis";
+import { getBlob, getLevelKey, getWorldKey, setBlob } from "./redis";
 
 type Point = {
   x: number;
@@ -156,6 +156,32 @@ export type WorldState = {
   code: { [key: string]: string };
 };
 
+export async function markLevelDone(
+  sessionId: string,
+  namespace: string,
+  id: string,
+  userCode: string
+): Promise<void> {
+  const key = getWorldKey(sessionId);
+  const levelKey = getLevelKey(namespace, id);
+  let worldState = await getBlob<WorldState>(key);
+  if (worldState === undefined) {
+    worldState = {
+      sessionId: sessionId,
+      done: [levelKey],
+      code: {
+        levelKey: userCode as string,
+      },
+    };
+  } else {
+    if (!worldState.done.includes(levelKey)) {
+      worldState.done.push(levelKey);
+    }
+    worldState.code[levelKey] = userCode;
+  }
+  await setBlob<WorldState>(key, worldState);
+}
+
 export async function getWorld(sessionId: string): Promise<{
   levels: Level[];
   metadata: Record<string, LevelMetadata>;
@@ -245,14 +271,19 @@ export async function getWorld(sessionId: string): Promise<{
           x: 20,
           y: 9 + index,
         };
+        const done: boolean | undefined = worldData?.done.includes(
+          getLevelKey("S", level.toString())
+        );
         return {
           location,
-          title: ["📡", "📟", "🎛️"][index],
+          title: done ? "✓" : ["📡", "📟", "🎛️"][index],
           target: `/S/${level}`,
           style: {
             fontWeight: "bold",
-            background: "white",
-            border: "1px solid gray",
+            background: done ? "green" : "white",
+            color: done ? "white" : "black",
+            borderColor: done ? "darkgreen" : "gray",
+            zIndex: done ? "1" : "0",
           },
         } as Level;
       });
