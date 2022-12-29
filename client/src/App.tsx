@@ -257,6 +257,9 @@ function App() {
                 WORLD.error = data["error"];
               }
               return [];
+            } else if (data["error"]) {
+              WORLD.error = data["error"];
+              return [];
             } else {
               WORLD.frame += 1;
               return data.input as number[][];
