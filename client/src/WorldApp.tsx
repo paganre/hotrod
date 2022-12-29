@@ -11,6 +11,7 @@ interface LevelProps {
 
 function LevelContainer(props: LevelProps) {
   const [flickerChar, setFlickerChar] = useState<string>();
+  const [overrideStyles, setOverrideStyles] = useState<Level["style"]>({});
   let flickerIndex: number | undefined;
   useEffect(() => {
     if (
@@ -37,18 +38,15 @@ function LevelContainer(props: LevelProps) {
     left: props.level.location.y * 21,
     top: props.level.location.x * 21,
   };
-  const overrideStyles: Level["style"] = {};
   useEffect(() => {
+    const newOverrideStyles: Level["style"] = {};
     if (props.hovering && props.hovering === props.level.metadataKey) {
-      overrideStyles["background"] = "rgba(255,255,0,0.15)";
-      overrideStyles["borderColor"] = "#ddd";
-      overrideStyles["color"] = "black";
-    } else {
-      delete overrideStyles["background"];
-      delete overrideStyles["borderColor"];
-      delete overrideStyles["color"];
+      newOverrideStyles["background"] = "rgba(255,255,0,0.15)";
+      newOverrideStyles["borderColor"] = "#ddd";
+      newOverrideStyles["color"] = "black";
     }
-  }, [props.hovering]);
+    setOverrideStyles(newOverrideStyles);
+  }, [props.hovering, props.level.metadataKey]);
   return (
     <div
       onMouseEnter={() => props.handleMouseEnter(props.level.metadataKey)}
