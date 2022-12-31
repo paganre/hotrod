@@ -1,62 +1,65 @@
-type Point = {
-  x: number;
-  y: number;
-};
+import DataStore from "../../apis/datastore";
+import { getDirection } from "../../apis/direction";
+import { getGPS } from "../../apis/gps";
+import Pedestrian from "../../apis/pedestrian";
+import { getSensor } from "../../apis/sensor";
+import * as p from "../../apis/point";
+import {
+  Grid,
+  LevelDefinition,
+  LibraryDefinition,
+  Point,
+  WorldMetadata,
+} from "../../types";
+import { isLevelDone, WorldState } from "../../world";
+import {
+  randomPoint,
+  randomIntInclusive,
+  toKey,
+} from "../../helpers/levelHelpers";
 
-function randomIntInclusive(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1) + min);
-}
-
-function toKey(point: Point): string {
-  return `${point.x},${point.y}`;
-}
-
-const width = 30;
-const height = 30;
-function randomPoint() {
-  return {
-    x: randomIntInclusive(0, width - 1),
-    y: randomIntInclusive(0, height - 1),
-  };
-}
-
-const start: Point = randomPoint();
-const pedCount = 500;
-const spy = randomIntInclusive(0, 29);
-const exists = new Set([toKey(start)]);
-for (let i = 0; i < pedCount; i++) {
-  while (true) {
-    const p = randomPoint();
-    if (!exists.has(toKey(p))) {
-      exists.add(toKey(p));
-      break;
-    }
-  }
-}
-
-export const GRID: string[][] = [];
-let c = 0;
-for (let i = 0; i < height; i++) {
-  const row: string[] = [];
-  for (let j = 0; j < width; j++) {
-    if (exists.has(toKey({ x: i, y: j }))) {
-      if (i == start.x && j == start.y) {
-        row.push("S");
-      } else {
-        if (c === spy) {
-          row.push("PX");
-        } else {
-          row.push("P");
-        }
-        c += 1;
+const getGrid = function (worldData: Omit<WorldState, "code">): Grid {
+  const width = 30;
+  const height = 30;
+  const start: Point = randomPoint(width, height);
+  const pedCount = 500;
+  const spy = randomIntInclusive(0, 499);
+  const exists = new Set([toKey(start)]);
+  for (let i = 0; i < pedCount; i++) {
+    while (true) {
+      const p = randomPoint(width, height);
+      if (!exists.has(toKey(p))) {
+        exists.add(toKey(p));
+        break;
       }
-    } else {
-      row.push(" ");
     }
   }
-  GRID.push(row);
-}
-GRID[start.x][start.y] = "S";
+
+  const GRID: Grid = [];
+  let c = 0;
+  for (let i = 0; i < height; i++) {
+    const row: string[] = [];
+    for (let j = 0; j < width; j++) {
+      if (exists.has(toKey({ x: i, y: j }))) {
+        if (i == start.x && j == start.y) {
+          row.push("S");
+        } else {
+          if (c === spy) {
+            row.push("PX");
+          } else {
+            row.push("P");
+          }
+          c += 1;
+        }
+      } else {
+        row.push(" ");
+      }
+    }
+    GRID.push(row);
+  }
+  GRID[start.x][start.y] = "S";
+  return GRID;
+};
 
 export const METADATA = {
   Sensor: {
@@ -71,48 +74,42 @@ export const DEFAULT_CODE: string = `/**
 * Spy is in the Times Square on New Year's eve.
 * Rules of the game is exactly the same, but it is a bit more crowded.
 **/
-
-/**
- * Your Sensor is upgraded once more.
- * You can now highlight a Pedestrian to see them better on the map.
- * Use this once you think you have identified the Spy.
- **/
-type Sensor = {
-    highlightPedestrian: (index: number) => void // Highlights the Pedestrian
-    isTargetClose: () => boolean;
-    getPedestrians: () => Pedestrian[]
-    getRoads: () => Point[] 
-}
-type GPS = {
-    getBounds: () => Point
-    getLocation: () => Point
-}
-
-type DataStore = {
-    has(key: string): boolean
-    get(key: string): string | undefined
-    set(key: string, value: string): void
-};
-
-type Direction = {
-    up: () => void 
-    left: () => void
-    down: () => void 
-    right: () => void
-}
-
-type Pedestrian = {
-    location: Point;
-    direction: "up" | "down" | "left" | "right" | "static";
-};
-
-type Point = {
-    x: number
-    y: number
-}
-    
-// Game loop: your code goes here!
 function gameLoop(direction: Direction, gps: GPS, sensor: Sensor, data: DataStore) {
-
+  // Let's go
 }
 `;
+
+const getLibraries = function (
+  worldData: Omit<WorldState, "code">
+): LibraryDefinition[] {
+  return [
+    getDirection(1),
+    getGPS(["getBounds", "getLocation"]),
+    getSensor(worldData),
+    DataStore,
+    p.Point,
+    Pedestrian,
+  ];
+};
+
+const getMetadata = function (
+  worldData: Omit<WorldState, "code">
+): WorldMetadata {
+  return {
+    Sensor: {
+      isTargetClose: 10,
+    },
+    nextLevel: "/world",
+  };
+};
+
+export const getLevel = function (
+  worldData: Omit<WorldState, "code">
+): LevelDefinition {
+  return {
+    grid: getGrid(worldData),
+    code: DEFAULT_CODE,
+    libraries: getLibraries(worldData),
+    metadata: getMetadata(worldData),
+  };
+};

@@ -1,8 +1,8 @@
-import Editor, { loader } from "@monaco-editor/react";
+import Editor, { loader, useMonaco } from "@monaco-editor/react";
 import React from "react";
 import { useState } from "react";
 import { getApiPath } from "./helpers/apiHelpers";
-import { Result } from "./types";
+import { LibraryDefinition, Result } from "./types";
 
 loader.config({
   paths: {
@@ -12,6 +12,7 @@ loader.config({
 
 export interface CodeEditorProps {
   defaultCode: string;
+  libraries: LibraryDefinition[];
   simulating: boolean;
   result?: Result;
   runCode: (code: string) => void;
@@ -20,6 +21,20 @@ export interface CodeEditorProps {
 }
 
 function CodeEditor(props: CodeEditorProps) {
+  const monaco = useMonaco();
+
+  React.useEffect(() => {
+    if (monaco) {
+      monaco.languages.typescript.javascriptDefaults.setEagerModelSync(true);
+      for (const library of props.libraries) {
+        monaco.languages.typescript.typescriptDefaults.addExtraLib(
+          library.definition,
+          library.filepath
+        );
+      }
+    }
+  }, [monaco, props.libraries]);
+
   const [code, setCode] = useState("");
   React.useEffect(() => {
     if (code === "") {

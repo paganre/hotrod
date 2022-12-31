@@ -3,8 +3,9 @@ import express, { Express } from "express";
 import path from "path";
 import cors from "cors";
 import md5 from "blueimp-md5";
-import { getWorld, markLevelDone } from "./world";
+import { getWorld, getWorldState, markLevelDone } from "./world";
 import session from "express-session";
+import { LevelDefinition } from "./types";
 let RedisStore = require("connect-redis")(session);
 const Redis = require("ioredis");
 let redisClient = new Redis();
@@ -36,16 +37,16 @@ app.get("/worldData", async (req, res) => {
   });
 });
 
-app.get("/api/:namespace/:id", (req, res) => {
+app.get("/api/:namespace/:id", async (req, res) => {
   const { namespace, id } = req.params;
   try {
-    const lvl = require(`./levels/${namespace}/${id}`);
-    res.json({
-      grid: lvl.GRID,
-      code: lvl.DEFAULT_CODE,
-      metadata: lvl.METADATA ? lvl.METADATA : {},
-    });
+    const worldState = await getWorldState(req.session.id);
+    const lvl = require(`./levels/${namespace}/${id}`).getLevel(
+      worldState
+    ) as LevelDefinition;
+    res.json(lvl);
   } catch (ex) {
+    console.log({ ex });
     res.send(404);
   }
 });
@@ -53,7 +54,6 @@ app.get("/api/:namespace/:id", (req, res) => {
 app.post("/api/:namespace/:id/done", async (req, res) => {
   const { namespace, id } = req.params;
   const { userCode } = req.body;
-  console.log(userCode);
   try {
     const lvl = require(`./levels/${namespace}/${id}`);
     if (lvl && !(lvl.METADATA && lvl.METADATA.type === "canvas")) {

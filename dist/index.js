@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -35,35 +26,32 @@ app.use((0, express_session_1.default)({
     saveUninitialized: true,
     cookie: { secure: false },
 }));
-app.get("/worldData", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { levels, metadata } = yield (0, world_1.getWorld)(req.session.id);
+app.get("/worldData", async (req, res) => {
+    const { levels, metadata } = await (0, world_1.getWorld)(req.session.id);
     res.json({
         levels,
         metadata,
     });
-}));
-app.get("/api/:namespace/:id", (req, res) => {
+});
+app.get("/api/:namespace/:id", async (req, res) => {
     const { namespace, id } = req.params;
     try {
-        const lvl = require(`./levels/${namespace}/${id}`);
-        res.json({
-            grid: lvl.GRID,
-            code: lvl.DEFAULT_CODE,
-            metadata: lvl.METADATA ? lvl.METADATA : {},
-        });
+        const worldState = await (0, world_1.getWorldState)(req.session.id);
+        const lvl = require(`./levels/${namespace}/${id}`).getLevel(worldState);
+        res.json(lvl);
     }
     catch (ex) {
+        console.log({ ex });
         res.send(404);
     }
 });
-app.post("/api/:namespace/:id/done", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+app.post("/api/:namespace/:id/done", async (req, res) => {
     const { namespace, id } = req.params;
     const { userCode } = req.body;
-    console.log(userCode);
     try {
         const lvl = require(`./levels/${namespace}/${id}`);
         if (lvl && !(lvl.METADATA && lvl.METADATA.type === "canvas")) {
-            yield (0, world_1.markLevelDone)(req.session.id, namespace, id, userCode);
+            await (0, world_1.markLevelDone)(req.session.id, namespace, id, userCode);
         }
         else {
             res.send(201);
@@ -72,12 +60,12 @@ app.post("/api/:namespace/:id/done", (req, res) => __awaiter(void 0, void 0, voi
     catch (ex) {
         res.send(404);
     }
-}));
-app.get("/api/:namespace/:id/input", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+app.get("/api/:namespace/:id/input", async (req, res) => {
     const { namespace, id } = req.params;
     try {
         const lvl = require(`./levels/${namespace}/${id}`);
-        const INPUTS = yield lvl.getInputs();
+        const INPUTS = await lvl.getInputs();
         if (INPUTS.length > 0) {
             res.json({ input: INPUTS[0] });
         }
@@ -88,14 +76,14 @@ app.get("/api/:namespace/:id/input", (req, res) => __awaiter(void 0, void 0, voi
     catch (ex) {
         res.send(404);
     }
-}));
-app.post("/api/:namespace/:id/input", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+app.post("/api/:namespace/:id/input", async (req, res) => {
     const { namespace, id } = req.params;
     const { data, index } = req.body;
     try {
         const lvl = require(`./levels/${namespace}/${id}`);
-        const INPUTS = yield lvl.getInputs();
-        const OUTPUTS = yield lvl.getOutputs();
+        const INPUTS = await lvl.getInputs();
+        const OUTPUTS = await lvl.getOutputs();
         if (OUTPUTS && OUTPUTS.length >= index) {
             const output = OUTPUTS[index];
             // check correctness
@@ -107,7 +95,7 @@ app.post("/api/:namespace/:id/input", (req, res) => __awaiter(void 0, void 0, vo
                 }
                 else {
                     // ended
-                    yield (0, world_1.markLevelDone)(req.session.id, namespace, id, "");
+                    await (0, world_1.markLevelDone)(req.session.id, namespace, id, "");
                     res.json({ done: true });
                 }
             }
@@ -122,7 +110,7 @@ app.post("/api/:namespace/:id/input", (req, res) => __awaiter(void 0, void 0, vo
     catch (ex) {
         res.send(404);
     }
-}));
+});
 const port = process.env.PORT || 8000;
 app.listen(port, () => {
     console.log(`listening on port ${port}`);

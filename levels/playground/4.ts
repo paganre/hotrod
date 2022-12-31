@@ -1,4 +1,18 @@
-export const GRID: string[][] = [
+import DataStore from "../../apis/datastore";
+import { getDirection } from "../../apis/direction";
+import { getGPS } from "../../apis/gps";
+import Pedestrian from "../../apis/pedestrian";
+import Point from "../../apis/point";
+import { getSensor } from "../../apis/sensor";
+import {
+  Grid,
+  LevelDefinition,
+  LibraryDefinition,
+  WorldMetadata,
+} from "../../types";
+import { WorldState } from "../../world";
+
+const GRID: Grid = [
   ["W", "W", " ", " ", " ", "W", "W", "W", "W", "W"],
   ["W", "W", " ", "W", " ", "W", "W", "W", "W", "W"],
   ["W", "W", " ", "W", " ", "W", "W", "E", " ", " "],
@@ -18,8 +32,20 @@ export const GRID: string[][] = [
   ["W", "W", "S", "W", "W", "W", "W", "W", "W", "W"],
 ];
 
-export const DEFAULT_CODE: string = `
-/** 
+const getDefinitions = function (
+  worldData: Omit<WorldState, "code">
+): LibraryDefinition[] {
+  return [
+    getDirection(1),
+    getGPS(["getBounds", "getLocation"]),
+    getSensor(worldData),
+    DataStore,
+    Point,
+    Pedestrian,
+  ];
+};
+
+const DEFAULT_CODE: string = `/** 
  * Pretty cool.
  * Now, let's make things a bit more stressful.
  * Let's introduce the concept of a "Pedestrian"
@@ -35,10 +61,6 @@ export const DEFAULT_CODE: string = `
  * After they move, they might change the direction for the next turn.
  * Some "Pedestrian"s will move in patterns, some will move randomly.
  **/
-type Pedestrian = {
-    location: Point; // Where Pedestrian is on the grid.
-    direction: "up" | "down" | "left" | "right" | "static"; // Which way Pedestrian will move next turn.
-};
 
 /**
  * New rules to the game:
@@ -49,51 +71,37 @@ type Pedestrian = {
  **/
 
 /**
- * Now, your Sensor is upgraded! 
- * It gives you all the Pedestrians on the map.
+ * Now, your Sensor is upgraded for no cost! 
+ * It gives you all of the Pedestrians on the map by the new "getPedestrians" function.
+ * Check the Sensor docs by hovering over it.
  **/
-type Sensor = {
-    getPedestrians: () => Pedestrian[]; // Returns the Pedestrians on the map.
-    getRoads: () => Point[] 
-}
 
 /**
- * In addition, your GPS now will give you the world's bounds.
+ * In addition, your GPS now will give you the world's bounds by the new "getBounds" function.
+ * Check the GPS docs by hovering over it.
  **/
-type GPS = {
-    getBounds: () => Point // x, y will give you the maximum value of x, y.
-    getLocation: () => Point
-    getTarget: () => Point
-}
-
-type DataStore = {
-    has(key: string): boolean
-    get(key: string): string | undefined
-    set(key: string, value: string): void
-};
-
-type Direction = {
-    up: () => void 
-    left: () => void
-    down: () => void 
-    right: () => void
-}
-
-type Point = {
-    x: number
-    y: number
-}
 
 // Can you get to the green tile without running into the Pedestrian?
 function gameLoop(direction: Direction, gps: GPS, sensor: Sensor, data: DataStore) {
-
+  // Let's go - Sensor and GPS is upgraded
 }
 `;
 
-export const METADATA = {
+const METADATA: WorldMetadata = {
   nextLevel: "/world",
   pedMoves: {
     "1": ["right", "right", "right", "right", "left", "left", "left", "left"],
     "2": ["left", "left", "right", "right"],
   },
+};
+
+export const getLevel = function (
+  worldData: Omit<WorldState, "code">
+): LevelDefinition {
+  return {
+    grid: GRID,
+    code: DEFAULT_CODE,
+    libraries: getDefinitions(worldData),
+    metadata: METADATA,
+  };
 };

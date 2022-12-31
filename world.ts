@@ -1,23 +1,5 @@
 import { getBlob, getLevelKey, getWorldKey, setBlob } from "./redis";
-
-type Point = {
-  x: number;
-  y: number;
-};
-
-type Level = {
-  location: Point;
-  title?: string;
-  style?: { [key: string]: string };
-  target?: string;
-  metadataKey?: string;
-  flickerIndex?: number;
-  flickeringChars?: string[];
-};
-
-type LevelMetadata = {
-  description: string; // markdown text
-};
+import { Level, LevelMetadata, Point } from "./types";
 
 function createRect(
   topLeft: Point,
@@ -182,33 +164,16 @@ export async function markLevelDone(
   await setBlob<WorldState>(key, worldState);
 }
 
-export async function getWorld(sessionId: string): Promise<{
-  levels: Level[];
-  metadata: Record<string, LevelMetadata>;
-}> {
-  let worldData = await getBlob<Omit<WorldState, "code">>(
-    getWorldKey(sessionId)
-  );
-  if (worldData === undefined) {
-    worldData = {
-      sessionId,
-      done: [],
-    };
-  }
-
+function getPlayground(worldData: Omit<WorldState, "code">): Level[] {
   const playgroundContainer = createRect({ x: 5, y: 6 }, { x: 7, y: 11 }, "P", {
     background: "rgba(0,0,0,0.05)",
     fontWeight: "bold",
   });
-  let playgroundDone: boolean = true;
   const playgroundLevels = [1, 2, 3, 4].map((level, index) => {
     const location: Point = { x: 6, y: 7 + index };
     const done: boolean | undefined = worldData?.done.includes(
       getLevelKey("playground", level.toString())
     );
-    if (!done) {
-      playgroundDone = false;
-    }
     return {
       location,
       title: done ? "✓" : level.toString(),
@@ -223,87 +188,147 @@ export async function getWorld(sessionId: string): Promise<{
       metadataKey: `P${level}`,
     } as Level;
   });
+  return [...playgroundContainer, ...playgroundLevels];
+}
 
-  let firstContainer: Level[] = [];
-  let firstLevels: Level[] = [];
-  let sensorContainer: Level[] = [];
-  let sensorLevels: Level[] = [];
-
-  if (playgroundDone) {
-    firstContainer = createRect({ x: 6, y: 13 }, { x: 9, y: 16 }, "1", {
-      fontWeight: "bold",
-      background: "rgba(0,0,0,0.05)",
-    });
-    let firstLevelsDone: boolean = true;
-    firstLevels = [1, 2, 3, 4].map((level, index) => {
-      const done: boolean | undefined = worldData?.done.includes(
-        getLevelKey("1", level.toString())
-      );
-      if (!done) {
-        firstLevelsDone = false;
-      }
-      const location: Point = {
-        x: 7 + Math.floor(index / 2),
-        y: 14 + (index % 2),
-      };
-      return {
-        location,
-        title: done ? "✓" : level.toString(),
-        target: `/1/${level}`,
-        style: {
-          fontWeight: "bold",
-          background: done ? "green" : "white",
-          color: done ? "white" : "black",
-          borderColor: done ? "darkgreen" : "gray",
-          zIndex: done ? "1" : "0",
-        },
-      } as Level;
-    });
-
-    if (firstLevelsDone) {
-      sensorContainer = createRect({ x: 20, y: 9 }, { x: 21, y: 11 }, "S", {
-        fontWeight: "bold",
-        background: "rgba(0,0,0,0.05)",
-      });
-
-      sensorLevels = [1, 2, 3].map((level, index) => {
-        const location: Point = {
-          x: 20,
-          y: 9 + index,
-        };
-        const done: boolean | undefined = worldData?.done.includes(
-          getLevelKey("S", level.toString())
-        );
-        return {
-          location,
-          title: done ? "✓" : ["📡", "📟", "🎛️"][index],
-          target: `/S/${level}`,
-          style: {
-            fontWeight: "bold",
-            background: done ? "green" : "white",
-            color: done ? "white" : "black",
-            borderColor: done ? "darkgreen" : "gray",
-            zIndex: done ? "1" : "0",
-          },
-        } as Level;
-      });
-    }
+function getFirstSection(worldData: Omit<WorldState, "code">): Level[] {
+  if (!isSectionDone(worldData, "playground", 4)) {
+    return [];
   }
+  const sectionContainer = createRect({ x: 6, y: 13 }, { x: 9, y: 16 }, "1", {
+    fontWeight: "bold",
+    background: "rgba(0,0,0,0.05)",
+  });
+  const section = [1, 2, 3, 4].map((level, index) => {
+    const done: boolean | undefined = worldData?.done.includes(
+      getLevelKey("1", level.toString())
+    );
+    const location: Point = {
+      x: 7 + Math.floor(index / 2),
+      y: 14 + (index % 2),
+    };
+    return {
+      location,
+      title: done ? "✓" : level.toString(),
+      target: `/1/${level}`,
+      style: {
+        fontWeight: "bold",
+        background: done ? "green" : "white",
+        color: done ? "white" : "black",
+        borderColor: done ? "darkgreen" : "gray",
+        zIndex: done ? "1" : "0",
+      },
+    } as Level;
+  });
+  return [...sectionContainer, ...section];
+}
 
-  let levels = [
-    ...playgroundContainer,
-    ...playgroundLevels,
-    ...firstContainer,
-    ...firstLevels,
-    ...sensorContainer,
-    ...sensorLevels,
-  ];
+function getSensorSection(worldData: Omit<WorldState, "code">): Level[] {
+  if (!isSectionDone(worldData, "playground", 4)) {
+    return [];
+  }
+  const sectionContainer = createRect({ x: 20, y: 9 }, { x: 21, y: 11 }, "S", {
+    fontWeight: "bold",
+    background: "rgba(0,0,0,0.05)",
+  });
+  const availableLevels = [1, 2];
+  const section = availableLevels.map((level, index) => {
+    const location: Point = {
+      x: 20,
+      y: 9 + index,
+    };
+    const done: boolean | undefined = worldData?.done.includes(
+      getLevelKey("S", level.toString())
+    );
+    return {
+      location,
+      title: done ? "✓" : ["📡", "📟", "🎛️"][index],
+      target: `/S/${level}`,
+      style: {
+        fontWeight: "bold",
+        background: done ? "green" : "white",
+        color: done ? "white" : "black",
+        borderColor: done ? "darkgreen" : "gray",
+        zIndex: done ? "1" : "0",
+      },
+    } as Level;
+  });
+  return [...sectionContainer, ...section];
+}
+
+export function isSectionDone(
+  worldData: Omit<WorldState, "code">,
+  sectionNamespace: WorldNamespace,
+  levels: number
+): boolean {
+  const playgroundLevels = Array.from({ length: levels }, (_, i) => i + 1);
+  return (
+    playgroundLevels.filter((level) =>
+      worldData?.done.includes(getLevelKey(sectionNamespace, level.toString()))
+    ).length === levels
+  );
+}
+
+export function isLevelDone(
+  worldData: Omit<WorldState, "code">,
+  sectionNamespace: WorldNamespace,
+  level: number
+): boolean {
+  return worldData?.done.includes(
+    getLevelKey(sectionNamespace, level.toString())
+  );
+}
+const ALL_NAMESPACES = ["playground", "1", "S"] as const;
+
+export type WorldNamespace = typeof ALL_NAMESPACES[number];
+
+type Generator = {
+  generate(worldState: Omit<WorldState, "code">): Level[];
+};
+
+type WorldGenerator = { [N in WorldNamespace]: Generator };
+
+const worldGenerator: WorldGenerator = {
+  playground: {
+    generate: getPlayground,
+  },
+  1: {
+    generate: getFirstSection,
+  },
+  S: {
+    generate: getSensorSection,
+  },
+};
+
+export async function getWorldState(
+  sessionId: string
+): Promise<Omit<WorldState, "code">> {
+  let worldData = await getBlob<Omit<WorldState, "code">>(
+    getWorldKey(sessionId)
+  );
+  if (worldData === undefined) {
+    worldData = {
+      sessionId,
+      done: [],
+    };
+  }
+  return worldData;
+}
+
+export async function getWorld(sessionId: string): Promise<{
+  levels: Level[];
+  metadata: Record<string, LevelMetadata>;
+}> {
+  let worldData = await getWorldState(sessionId);
+  let levels: Level[] = [];
+  for (const namespace of ALL_NAMESPACES) {
+    const section = worldGenerator[namespace].generate(worldData);
+    levels = levels.concat(section);
+  }
 
   levels = levels.concat(
     getFillerLevels(levels, { color: "rgb(50,50,50)", fontSize: "14px" })
   );
-  levels = levels.concat(sensorContainer);
-  levels = levels.concat(sensorLevels);
   levels = levels.concat(
     getFillerLevels(levels, { color: "rgb(150,150,150)", fontSize: "12px" })
   );

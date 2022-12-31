@@ -19,6 +19,7 @@ import {
   GPS,
   Input,
   KeyValue,
+  LibraryDefinition,
   Pedestrian,
   Point,
   Printer,
@@ -60,6 +61,7 @@ function App() {
   const [route, setRoute] = React.useState<RouteType>();
   const [userCode, setUserCode] = React.useState("");
   const [defaultCode, setDefaultCode] = React.useState("");
+  const [libraries, setLibraries] = React.useState<LibraryDefinition[]>([]);
   const [pedestrians, setPedestrians] = React.useState<Pedestrian[]>([]);
 
   React.useEffect(() => {
@@ -83,6 +85,7 @@ function App() {
           }
           WORLD.original_grid = JSON.parse(JSON.stringify(data.grid));
           setDefaultCode(data.code);
+          setLibraries(data.libraries);
           resetWithGrid(JSON.parse(JSON.stringify(WORLD.original_grid)));
         });
     } else if (route === "world") {
@@ -480,6 +483,7 @@ function App() {
       {route === "level" && (
         <CodeEditor
           defaultCode={defaultCode}
+          libraries={libraries}
           reset={reset}
           runCode={startSimulation}
           simulating={simulating}

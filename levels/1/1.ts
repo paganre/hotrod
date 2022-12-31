@@ -1,4 +1,18 @@
-export const GRID: string[][] = [
+import DataStore from "../../apis/datastore";
+import { getDirection } from "../../apis/direction";
+import { getGPS } from "../../apis/gps";
+import Pedestrian from "../../apis/pedestrian";
+import Point from "../../apis/point";
+import { getSensor } from "../../apis/sensor";
+import {
+  Grid,
+  LevelDefinition,
+  LibraryDefinition,
+  WorldMetadata,
+} from "../../types";
+import { WorldState } from "../../world";
+
+const GRID: Grid = [
   ["W", "W", "P", "P", "P", "W", "W", "W", "W", "W"],
   ["W", "W", "P", "W", "P", "W", "W", "W", "W", "W"],
   ["W", "W", "P", "W", "P", "W", "W", "E", "P", "P"],
@@ -18,57 +32,47 @@ export const GRID: string[][] = [
   ["W", "W", "S", "W", "W", "W", "W", "W", "W", "W"],
 ];
 
-export const DEFAULT_CODE: string = `/**
+const getDefinitions = function (
+  worldData: Omit<WorldState, "code">
+): LibraryDefinition[] {
+  return [
+    getDirection(1),
+    getGPS(["getBounds", "getLocation"]),
+    getSensor(worldData),
+    DataStore,
+    Point,
+    Pedestrian,
+  ];
+};
+
+const DEFAULT_CODE: string = `/**
  * Alright!
  * You are finally graduated. 
  * Let's put your previous code into some chaotic test!
  * Rules are the same, but Pedestrians are now moving randomly.
  *
- * TIP: Don't forget to take bounds into account.
- * If a Pedestrian wants to go right but they are at the end of the grid, they won' move!
+ * TIP: Don't forget to take bounds into account via "gps.getBounds()".
+ * If a Pedestrian wants to move but they will be out of bounds, 
+ * they will end up staying in the same location.
  **/
 
-
-type Pedestrian = {
-    location: Point; // Where Pedestrian is
-    direction: "up" | "down" | "left" | "right" | "static"; // Which way Pedestrian will move.
-};
-
-type Sensor = {
-    getPedestrians: () => Pedestrian[]; // Returns the Pedestrians on the map.
-    getRoads: () => Point[] 
-}
-
-type GPS = {
-    getBounds: () => Point // x, y will give you the maximum value of x, y.
-    getLocation: () => Point
-    getTarget: () => Point
-}
-
-type DataStore = {
-    has(key: string): boolean
-    get(key: string): string | undefined
-    set(key: string, value: string): void
-};
-
-type Direction = {
-    up: () => void 
-    left: () => void
-    down: () => void 
-    right: () => void
-}
-
-type Point = {
-    x: number
-    y: number
-}
-  
-// Get to green tile without killing anyone
+// Get to green tile without killing anyone 💀
 function gameLoop(direction: Direction, gps: GPS, sensor: Sensor, data: DataStore) {
-
+    // Let's go
 }
 `;
 
-export const METADATA = {
+const METADATA: WorldMetadata = {
   nextLevel: "/1/2",
+};
+
+export const getLevel = function (
+  worldData: Omit<WorldState, "code">
+): LevelDefinition {
+  return {
+    grid: GRID,
+    code: DEFAULT_CODE,
+    libraries: getDefinitions(worldData),
+    metadata: METADATA,
+  };
 };

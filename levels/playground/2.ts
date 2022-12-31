@@ -1,4 +1,13 @@
-export const GRID: string[][] = [
+import { getDirection } from "../../apis/direction";
+import {
+  Grid,
+  LevelDefinition,
+  LibraryDefinition,
+  WorldMetadata,
+} from "../../types";
+import { WorldState } from "../../world";
+
+const GRID: Grid = [
   ["W", "W", "W", "W", "W", "W", "W", "W", "W"],
   ["W", " ", " ", " ", "E", " ", " ", " ", " "],
   ["W", " ", " ", " ", " ", " ", " ", " ", " "],
@@ -10,7 +19,9 @@ export const GRID: string[][] = [
   ["W", "W", "W", "W", "W", "W", "W", "W", "W"],
 ];
 
-export const DEFAULT_CODE: string = `/**
+const DEFINITIONS: LibraryDefinition[] = [getDirection(1)];
+
+const DEFAULT_CODE: string = `/**
  * Wow, you did it. Let's do it again.
  * But this time let's introduce the "Game Loop".
  * 
@@ -27,19 +38,22 @@ export const DEFAULT_CODE: string = `/**
  * So you can only move the HotRod once per turn.
  * If you call it more than once, only the first call will be executed.
  **/
-type Direction = {
-    up: () => void // Move HotRod one square up
-    left: () => void // Move HotRod one square left
-    down: () => void // Move HotRod one square down
-    right: () => void // Move HotRod one square right
-} 
-
-// Let's go!
 function gameLoop(direction: Direction) {
     // your code goes here.
 }
 `;
 
-export const METADATA = {
+const METADATA: WorldMetadata = {
   nextLevel: "/playground/3",
+};
+
+export const getLevel = function (
+  worldData: Omit<WorldState, "code">
+): LevelDefinition {
+  return {
+    grid: GRID,
+    code: DEFAULT_CODE,
+    libraries: DEFINITIONS,
+    metadata: METADATA,
+  };
 };

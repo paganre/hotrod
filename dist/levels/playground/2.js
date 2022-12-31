@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.METADATA = exports.DEFAULT_CODE = exports.GRID = void 0;
-exports.GRID = [
+exports.getLevel = void 0;
+const direction_1 = require("../../apis/direction");
+const GRID = [
     ["W", "W", "W", "W", "W", "W", "W", "W", "W"],
     ["W", " ", " ", " ", "E", " ", " ", " ", " "],
     ["W", " ", " ", " ", " ", " ", " ", " ", " "],
@@ -12,7 +13,8 @@ exports.GRID = [
     ["W", " ", " ", " ", "S", " ", " ", " ", " "],
     ["W", "W", "W", "W", "W", "W", "W", "W", "W"],
 ];
-exports.DEFAULT_CODE = `/**
+const DEFINITIONS = [(0, direction_1.getDirection)(1)];
+const DEFAULT_CODE = `/**
  * Wow, you did it. Let's do it again.
  * But this time let's introduce the "Game Loop".
  * 
@@ -29,18 +31,19 @@ exports.DEFAULT_CODE = `/**
  * So you can only move the HotRod once per turn.
  * If you call it more than once, only the first call will be executed.
  **/
-type Direction = {
-    up: () => void // Move HotRod one square up
-    left: () => void // Move HotRod one square left
-    down: () => void // Move HotRod one square down
-    right: () => void // Move HotRod one square right
-} 
-
-// Let's go!
 function gameLoop(direction: Direction) {
     // your code goes here.
 }
 `;
-exports.METADATA = {
+const METADATA = {
     nextLevel: "/playground/3",
 };
+const getLevel = function (worldData) {
+    return {
+        grid: GRID,
+        code: DEFAULT_CODE,
+        libraries: DEFINITIONS,
+        metadata: METADATA,
+    };
+};
+exports.getLevel = getLevel;

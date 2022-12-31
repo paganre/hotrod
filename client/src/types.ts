@@ -107,3 +107,8 @@ export type Level = {
 export type LevelMetadata = {
   description: string; // markdown text
 };
+
+export type LibraryDefinition = {
+  definition: string;
+  filepath: string;
+};
